@@ -1,21 +1,33 @@
-# Dockerfile.api — FastAPI backend with Python 3.11, AI model dependencies, and uvicorn server
+# Dockerfile — Clariva FastAPI backend for HuggingFace Spaces
+# Port 7860 is required by HuggingFace
 
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
-# System dependencies for PyMuPDF, FAISS, ffmpeg (for Whisper)
+# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
     ffmpeg \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/requirements.txt .
+# Install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY backend/ .
+# Install Whisper separately (large package)
+RUN pip install --no-cache-dir openai-whisper
 
-EXPOSE 8000
+# Copy application files
+COPY . .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Create required directories
+RUN mkdir -p rag_storage
+
+# HuggingFace Spaces requires port 7860
+EXPOSE 7860
+
+# Start the server
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]

@@ -131,13 +131,16 @@ export default function AuthPage() {
             { tag: "Deep Research", text: "Multi-source synthesis" },
             { tag: "YouTube", text: "Instant transcript insights" },
             { tag: "Citations", text: "Inline source verification" },
+            { tag: "Media", text: "Accurate audio transcription" },
+            { tag: "Streaming", text: "Real-time token responses" },
+            { tag: "Speed", text: "Instant vector-search retrieval" },
           ].map((feature, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 + i * 0.1 }}
-              className="flex flex-col gap-1 p-4 rounded-xl border border-border/50 bg-card/30 backdrop-blur"
+              className="flex flex-col gap-1 p-4 rounded-xl border border-border/50 bg-card/30 backdrop-blur hover:bg-card/50 transition-colors"
             >
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{feature.tag}</span>
               <span className="text-sm font-medium text-foreground">{feature.text}</span>

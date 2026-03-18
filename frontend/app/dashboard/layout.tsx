@@ -135,9 +135,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <button onClick={() => setCommandPaletteOpen(true)} className="p-1.5 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors" title="Search sources (Ctrl+K)">
                     <Command className="h-4 w-4" />
                   </button>
-                  <button onClick={() => setTheme(theme === "dark" ? "light" : "dark")} className="p-1.5 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors" title="Toggle theme">
-                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                  </button>
                   <div className="flex items-center gap-1.5 ml-1 bg-secondary border border-border rounded-full pl-0.5 pr-2.5 py-0.5 text-xs text-muted-foreground">
                     <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px] font-semibold font-display shrink-0">
                       {currentUser.name.charAt(0).toUpperCase()}
