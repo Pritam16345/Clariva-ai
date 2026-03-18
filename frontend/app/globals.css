@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 60 10% 98%; /* #FAFAF8 */
+    --foreground: 240 10% 12%; /* #1c1c1f */
+    
+    --card: 0 0% 100%; /* #ffffff */
+    --card-foreground: 240 10% 12%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 12%;
+    
+    --primary: 240 10% 12%;
+    --primary-foreground: 60 10% 98%;
+    
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 10% 12%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens for source types */
+    --yt: 0 100% 65%;
+    --web: 210 100% 60%;
+    --pdf: 350 80% 60%;
+    
+    /* Panel backgrounds */
+    --cogni-surface: 60 5% 96%;
+    --cogni-surface-2: 0 0% 100%;
+    
+    /* Accents */
+    --cogni-accent-glow: 240 10% 80%;
+    --cogni-accent-2: 240 5% 92%;
+  }
+
+  .dark {
+    --background: 240 10% 8%; /* Dark gray almost black */
+    --foreground: 60 5% 96%; /* Off-white text */
+    
+    --card: 240 10% 12%; /* Lighter card */
+    --card-foreground: 60 5% 96%;
+    
+    --popover: 240 10% 12%;
+    --popover-foreground: 60 5% 96%;
+    
+    --primary: 60 5% 96%;
+    --primary-foreground: 240 10% 8%;
+    
+    --secondary: 240 10% 18%;
+    --secondary-foreground: 60 5% 96%;
+    
+    --muted: 240 10% 18%;
+    --muted-foreground: 240 5% 65%;
+    
+    --accent: 240 10% 18%;
+    --accent-foreground: 60 5% 96%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 60 5% 96%;
+
+    --border: 240 10% 18%;
+    --input: 240 10% 18%;
+    --ring: 240 5% 80%;
+
+    --cogni-surface: 240 10% 10%;
+    --cogni-surface-2: 240 10% 15%;
+    --cogni-accent-glow: 240 20% 40%;
+    --cogni-accent-2: 240 10% 25%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: theme('colors.border');
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: theme('colors.muted.foreground');
+}
+
+/* Animations that are highly relevant to NotebookLM polish */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-fade-in { animation: fadeIn 0.4s ease forwards; }
+.animate-shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+
+/* Prose/Markdown styling specifically built for the AI output */
+.prose {
+  @apply text-foreground leading-relaxed;
+}
+.prose h1, .prose h2, .prose h3 {
+  @apply font-display text-foreground font-semibold mt-6 mb-3;
+}
+.prose h1 { @apply text-2xl; }
+.prose h2 { @apply text-xl; }
+.prose h3 { @apply text-lg; }
+.prose p { @apply mb-4 text-[15px] leading-[1.7]; }
+.prose ul { @apply list-disc list-outside pl-5 mb-4 space-y-1; }
+.prose ol { @apply list-decimal list-outside pl-5 mb-4 space-y-1; }
+.prose a { @apply text-primary underline underline-offset-4 decoration-primary/30 hover:decoration-primary; }
+.prose strong { @apply font-semibold; }
+.prose blockquote { @apply border-l-4 border-muted-foreground/30 pl-4 italic text-muted-foreground my-4; }
+.prose code { @apply bg-muted text-muted-foreground px-1.5 py-0.5 rounded-md text-sm font-mono whitespace-pre-wrap break-words; }
+.prose pre { @apply bg-card border border-border rounded-lg p-4 overflow-x-auto mb-4; }
+.prose pre code { @apply bg-transparent p-0 text-sm; text-shadow: none; }

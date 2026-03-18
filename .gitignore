@@ -1,0 +1,38 @@
+cat .gitignore
+```
+
+It probably doesn't have `node_modules` in it. Fix it:
+
+**Add this to your root `.gitignore`:**
+```
+# Dependencies
+node_modules/
+frontend/node_modules/
+**/node_modules/
+
+# Python
+acpenv/
+backend/acpenv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+**/.env
+
+# Database
+content.db
+*.db
+
+# RAG storage
+rag_storage/
+*.faiss
+*.chunks.json
+
+# Next.js
+frontend/.next/
+.next/
+
+# Build
+dist/
+build/
