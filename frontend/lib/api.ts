@@ -3,6 +3,7 @@
 import type { ChatResponse, FeedbackRequest, FeedbackStat, Source, TokenResponse, User, Note, SourceStats } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const CF_WORKER_URL = process.env.NEXT_PUBLIC_CF_WORKER_URL || "https://my-ai-worker.pritam-kundu.workers.dev";
 
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
@@ -127,104 +128,89 @@ export type StreamCallback = (token: string) => void;
 export type StreamDoneCallback = (sources?: string[]) => void;
 export type StreamErrorCallback = (error: string) => void;
 
-async function streamFetch(
-  endpoint: string,
-  body: Record<string, unknown>,
+// Helper: fetch with auto-refresh on 401
+async function fetchWithRefresh(
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  let res = await fetch(url, init);
+
+  if (res.status === 401 && refreshToken) {
+    const newToken = await tryRefreshToken();
+    if (newToken) {
+      const headers = new Headers(init.headers);
+      headers.set("Authorization", `Bearer ${newToken}`);
+      res = await fetch(url, { ...init, headers });
+    }
+  }
+
+  return res;
+}
+
+// Call Cloudflare Worker directly from browser for AI streaming
+async function callCloudflareWorker(
+  context: string,
+  question: string,
   onToken: StreamCallback,
   onDone: StreamDoneCallback,
   onError: StreamErrorCallback,
 ): Promise<void> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  try {
+    const response = await fetch(CF_WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context, question }),
+    });
 
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-  }
-
-  let res = await fetch(`${API_BASE_URL}${endpoint}`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
-
-  // Auto-refresh on 401
-  if (res.status === 401 && refreshToken) {
-    const newToken = await tryRefreshToken();
-    if (newToken) {
-      headers["Authorization"] = `Bearer ${newToken}`;
-      res = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      });
-    } else {
-      onError("Session expired. Please sign in again.");
-      return;
+    if (!response.ok) {
+      throw new Error(`AI service error: ${response.status}`);
     }
-  }
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    // Try to extract structured error or regular string
-    let errMsg = `Error ${res.status}`;
-    if (err.detail && typeof err.detail === "object") {
-      errMsg = JSON.stringify(err.detail);
-    } else if (err.detail) {
-      errMsg = err.detail;
-    }
-    onError(errMsg);
-    return;
-  }
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
 
-  const reader = res.body?.getReader();
-  if (!reader) {
-    onError("No response body");
-    return;
-  }
+    if (!reader) throw new Error('No response stream');
 
-  const decoder = new TextDecoder();
-  let buffer = "";
+    let buffer = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("data: ")) continue;
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data: ')) continue;
 
-      const payload = trimmed.slice(6);
-
-      if (payload === "[DONE]") {
-        onDone();
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(payload) as { token?: string; error?: string; sources?: string[] };
-        if (parsed.error) {
-          onError(parsed.error);
+        const payload = trimmed.slice(6);
+        if (payload === '[DONE]') {
+          onDone();
           return;
         }
-        if (parsed.sources) {
-          onDone(parsed.sources);
-          return;
+
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.response !== undefined) {
+            onToken(parsed.response);
+          } else if (parsed.token !== undefined) {
+            onToken(parsed.token);
+          }
+        } catch {
+          // raw text chunk, emit directly
+          if (trimmed.length > 6) {
+            onToken(payload);
+          }
         }
-        if (parsed.token !== undefined) {
-          onToken(parsed.token);
-        }
-      } catch {
-        // Non-JSON line, skip
       }
     }
-  }
 
-  onDone();
+    onDone();
+  } catch (err: unknown) {
+    onError(err instanceof Error ? err.message : 'Streaming failed');
+  }
 }
 
 export const api = {
@@ -311,35 +297,76 @@ export const api = {
       body: { source_identifier: sourceIdentifier, question },
     }),
 
-  streamChat: (
+  streamChat: async (
     sourceIdentifier: string,
     question: string,
     onToken: StreamCallback,
     onDone: StreamDoneCallback,
     onError: StreamErrorCallback,
-  ) =>
-    streamFetch(
-      "/chat",
-      { source_identifier: sourceIdentifier, question },
-      onToken,
-      onDone,
-      onError,
-    ),
+  ) => {
+    try {
+      // Step 1: Get context from backend
+      const contextRes = await fetchWithRefresh(
+        `${API_BASE_URL}/chat/context`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getAccessToken()}`,
+          },
+          body: JSON.stringify({
+            source_identifier: sourceIdentifier,
+            question,
+          }),
+        },
+      );
+      if (!contextRes.ok) {
+        const err = await contextRes.json().catch(() => ({}));
+        onError((err as { detail?: string }).detail || 'Failed to get context');
+        return;
+      }
+      const { context, question: q } = await contextRes.json();
 
-  streamChatMulti: (
+      // Step 2: Call Cloudflare Worker directly from browser
+      await callCloudflareWorker(context, q, onToken, onDone, onError);
+    } catch (err: unknown) {
+      onError(err instanceof Error ? err.message : 'Chat failed');
+    }
+  },
+
+  streamChatMulti: async (
     question: string,
     sourceIds: number[] | undefined,
     onToken: StreamCallback,
     onDone: StreamDoneCallback,
     onError: StreamErrorCallback,
-  ) =>
-    streamFetch(
-      "/chat/multi",
-      { question, source_ids: sourceIds },
-      onToken,
-      onDone,
-      onError,
-    ),
+  ) => {
+    try {
+      // Step 1: Get context from backend
+      const contextRes = await fetchWithRefresh(
+        `${API_BASE_URL}/chat/multi/context`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getAccessToken()}`,
+          },
+          body: JSON.stringify({ question, source_ids: sourceIds }),
+        },
+      );
+      if (!contextRes.ok) {
+        const err = await contextRes.json().catch(() => ({}));
+        onError((err as { detail?: string }).detail || 'Failed to get context');
+        return;
+      }
+      const { context, question: q } = await contextRes.json();
+
+      // Step 2: Call Cloudflare Worker directly from browser
+      await callCloudflareWorker(context, q, onToken, onDone, onError);
+    } catch (err: unknown) {
+      onError(err instanceof Error ? err.message : 'Chat failed');
+    }
+  },
 
   sendFeedback: (feedback: FeedbackRequest) =>
     hFetch<{ id: number; message: string }>("/feedback", {

@@ -716,6 +716,129 @@ Answer completely and thoroughly:"""
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
+# ── Context-only endpoints (browser calls Cloudflare Worker directly) ──────
+
+@app.post("/chat/context", tags=["chat"])
+@limiter.limit("60/hour")
+def get_chat_context(
+    request:      Request,
+    body:         ChatRequest,
+    db:           Session      = Depends(get_db),
+    current_user: models.User  = Depends(get_current_user),
+):
+    """Return retrieved RAG context + question so the frontend can call the AI directly."""
+    source = crud.get_content_by_source_and_owner(
+        db,
+        owner_id=int(current_user.id),
+        source_identifier=body.source_identifier,
+    )
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    scoped_key = re.sub(
+        r'[^a-zA-Z0-9_-]', '_',
+        f"user{int(current_user.id)}_{body.source_identifier}"
+    )
+
+    if scoped_key not in rag_indexes:
+        _load_rag_index(str(body.source_identifier), int(current_user.id))
+    if scoped_key not in rag_indexes:
+        _build_rag_index(str(body.source_identifier), str(source.content), int(current_user.id))
+    if scoped_key not in rag_indexes:
+        raise HTTPException(status_code=404, detail="Source not indexed")
+
+    index_data = rag_indexes[scoped_key]
+    index      = index_data["index"]
+    chunks     = index_data["chunks"]
+
+    q_embedding = embedding_model.encode([body.question])
+    q_embedding = np.array(q_embedding, dtype=np.float32)
+
+    k = min(6, len(chunks))
+    distances, indices = index.search(q_embedding, k)
+
+    scored = sorted(
+        [
+            (float(distances[0][i]), chunks[indices[0][i]])
+            for i in range(k)
+            if 0 <= indices[0][i] < len(chunks)
+        ],
+        key=lambda x: x[0],
+    )
+    top_chunks = [chunk for _, chunk in scored]
+    context    = "\n\n".join(top_chunks)
+
+    return {
+        "context":      context,
+        "question":     body.question,
+        "source_title": str(source.title or body.source_identifier),
+        "source_type":  str(source.source_type),
+    }
+
+
+@app.post("/chat/multi/context", tags=["chat"])
+@limiter.limit("60/hour")
+def get_multi_chat_context(
+    request:      Request,
+    body:         ChatMultiRequest,
+    db:           Session      = Depends(get_db),
+    current_user: models.User  = Depends(get_current_user),
+):
+    """Return aggregated RAG context from multiple sources for direct AI calls."""
+    sources = crud.get_sources_by_owner(db, owner_id=int(current_user.id))
+    if body.source_ids:
+        sources = [s for s in sources if int(s.id) in body.source_ids]
+
+    if not sources:
+        raise HTTPException(status_code=404, detail="No sources found")
+
+    all_scored: list[tuple[float, str, str]] = []
+
+    for source in sources:
+        scoped_key = re.sub(
+            r'[^a-zA-Z0-9_-]', '_',
+            f"user{int(current_user.id)}_{str(source.source_identifier)}"
+        )
+
+        if scoped_key not in rag_indexes:
+            _load_rag_index(str(source.source_identifier), int(current_user.id))
+        if scoped_key not in rag_indexes:
+            continue
+
+        index_data = rag_indexes[scoped_key]
+        index      = index_data["index"]
+        chunks     = index_data["chunks"]
+
+        q_embedding = embedding_model.encode([body.question])
+        q_embedding = np.array(q_embedding, dtype=np.float32)
+
+        k = min(3, len(chunks))
+        distances, indices = index.search(q_embedding, k)
+
+        for i in range(k):
+            if 0 <= indices[0][i] < len(chunks):
+                all_scored.append((
+                    float(distances[0][i]),
+                    chunks[indices[0][i]],
+                    str(source.title or source.source_identifier),
+                ))
+
+    if not all_scored:
+        raise HTTPException(status_code=404, detail="No indexed sources found")
+
+    all_scored.sort(key=lambda x: x[0])
+    top = all_scored[:6]
+    context = "\n\n".join(
+        f"[From: {title}]\n{chunk}" for _, chunk, title in top
+    )
+
+    return {
+        "context":  context,
+        "question": body.question,
+    }
+
+
+
 @app.post("/chat/sync", tags=["chat"])
 @limiter.limit("60/hour")
 def chat_sync(

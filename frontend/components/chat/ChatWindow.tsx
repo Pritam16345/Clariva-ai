@@ -11,6 +11,9 @@ import { MessageBubble } from "./MessageBubble";
 import { SuggestionChips } from "./SuggestionChips";
 import { ChatInput } from "./ChatInput";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const CF_WORKER_URL = process.env.NEXT_PUBLIC_CF_WORKER_URL || "https://my-ai-worker.pritam-kundu.workers.dev";
+
 const typeBadgeMap: Record<string, string> = {
   yt: "text-red-500 bg-red-500/10",
   web: "text-blue-500 bg-blue-500/10",
@@ -119,9 +122,14 @@ export function ChatWindow() {
       setIsStreaming(false);
     };
 
-    const performStream = async (endpoint: string, bodyObj: any) => {
+    // 2-step: fetch context from backend, then stream from CF Worker
+    const streamFromWorker = async (
+      contextEndpoint: string,
+      bodyObj: Record<string, unknown>,
+    ) => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}${endpoint}`, {
+        // Step 1: get context from backend
+        const contextRes = await fetch(`${API_URL}${contextEndpoint}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -130,14 +138,27 @@ export function ChatWindow() {
           body: JSON.stringify(bodyObj)
         });
 
-        if (!res.ok) throw new Error(`Error: ${res.status}`);
-        
-        const reader = res.body?.getReader();
+        if (!contextRes.ok) {
+          const err = await contextRes.json().catch(() => ({}));
+          throw new Error(err.detail || `Context error: ${contextRes.status}`);
+        }
+
+        const { context, question: q } = await contextRes.json();
+
+        // Step 2: stream from Cloudflare Worker
+        const aiRes = await fetch(CF_WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ context, question: q }),
+        });
+
+        if (!aiRes.ok) throw new Error(`AI service error: ${aiRes.status}`);
+
+        const reader = aiRes.body?.getReader();
         if (!reader) throw new Error("No response body");
-        
+
         const decoder = new TextDecoder();
         let buffer = "";
-        let sourcesFound: string[] | undefined;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -150,39 +171,35 @@ export function ChatWindow() {
           for (const line of lines) {
             const trimmed = line.trim();
             if (!trimmed.startsWith("data: ")) continue;
-            
+
             const payload = trimmed.slice(6);
             if (payload === "[DONE]") {
-              onDone(sourcesFound);
+              onDone();
               return;
             }
 
             try {
               const parsed = JSON.parse(payload);
-              if (parsed.error) {
-                onError(parsed.error);
-                return;
-              }
-              if (parsed.sources) {
-                sourcesFound = parsed.sources;
-                onDone(sourcesFound); // Yield sources right away if received
-              }
-              if (parsed.token !== undefined) {
+              if (parsed.response !== undefined) {
+                onToken(parsed.response);
+              } else if (parsed.token !== undefined) {
                 onToken(parsed.token);
               }
-            } catch {}
+            } catch {
+              // Non-JSON chunk
+            }
           }
         }
-        onDone(sourcesFound);
+        onDone();
       } catch (err: any) {
         onError(err.message || "Streaming failed");
       }
     };
 
     if (selectedSourceIds.length > 1) {
-      await performStream("/chat/multi", { question, source_ids: selectedSourceIds });
+      await streamFromWorker("/chat/multi/context", { question, source_ids: selectedSourceIds });
     } else if (activeSourceObj) {
-      await performStream("/chat", { source_identifier: activeSourceObj.source_identifier, question });
+      await streamFromWorker("/chat/context", { source_identifier: activeSourceObj.source_identifier, question });
     }
   }
 
@@ -440,7 +457,8 @@ export function ChatWindow() {
     };
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"}/chat`, {
+      // Step 1: get context from backend
+      const contextRes = await fetch(`${API_URL}/chat/context`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -449,11 +467,25 @@ export function ChatWindow() {
         body: JSON.stringify({ source_identifier: activeSourceObj.source_identifier, question })
       });
 
-      if (!res.ok) throw new Error(`Error: ${res.status}`);
-      
-      const reader = res.body?.getReader();
+      if (!contextRes.ok) {
+        const errData = await contextRes.json().catch(() => ({}));
+        throw new Error(errData.detail || `Context error: ${contextRes.status}`);
+      }
+
+      const { context, question: q } = await contextRes.json();
+
+      // Step 2: stream from Cloudflare Worker
+      const aiRes = await fetch(CF_WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ context, question: q }),
+      });
+
+      if (!aiRes.ok) throw new Error(`AI service error: ${aiRes.status}`);
+
+      const reader = aiRes.body?.getReader();
       if (!reader) throw new Error("No response body");
-      
+
       const decoder = new TextDecoder();
       let buffer = "";
 
@@ -468,7 +500,7 @@ export function ChatWindow() {
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed.startsWith("data: ")) continue;
-          
+
           const payload = trimmed.slice(6);
           if (payload === "[DONE]") {
             onDone();
@@ -481,7 +513,9 @@ export function ChatWindow() {
               onError(parsed.error);
               return;
             }
-            if (parsed.token !== undefined) {
+            if (parsed.response !== undefined) {
+              onToken(parsed.response);
+            } else if (parsed.token !== undefined) {
               onToken(parsed.token);
             }
           } catch {}
