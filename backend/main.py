@@ -53,6 +53,84 @@ CLOUDFLARE_WORKER_URL = os.getenv(
     "https://my-ai-worker.pritam-kundu.workers.dev",
 )
 
+def _upload_to_supabase(safe_key: str) -> bool:
+    """Upload FAISS index and chunks to Supabase Storage."""
+    from auth import supabase
+    try:
+        faiss_path  = f"{RAG_STORAGE_DIR}/{safe_key}.faiss"
+        chunks_path = f"{RAG_STORAGE_DIR}/{safe_key}.chunks.json"
+        
+        if not os.path.exists(faiss_path) or not os.path.exists(chunks_path):
+            return False
+        
+        # Upload .faiss file
+        with open(faiss_path, "rb") as f:
+            supabase.storage.from_("rag-indexes").upload(
+                path=f"{safe_key}.faiss",
+                file=f.read(),
+                file_options={"content-type": "application/octet-stream",
+                              "upsert": "true"}
+            )
+        
+        # Upload .chunks.json file
+        with open(chunks_path, "rb") as f:
+            supabase.storage.from_("rag-indexes").upload(
+                path=f"{safe_key}.chunks.json",
+                file=f.read(),
+                file_options={"content-type": "application/json",
+                              "upsert": "true"}
+            )
+        
+        print(f"✅ Uploaded {safe_key} to Supabase Storage")
+        return True
+    except Exception as e:
+        print(f"⚠️ Supabase Storage upload failed (non-fatal): {e}")
+        return False
+
+
+def _download_from_supabase(safe_key: str) -> bool:
+    """Download FAISS index and chunks from Supabase Storage."""
+    from auth import supabase
+    try:
+        faiss_path  = f"{RAG_STORAGE_DIR}/{safe_key}.faiss"
+        chunks_path = f"{RAG_STORAGE_DIR}/{safe_key}.chunks.json"
+        
+        # Download .faiss file
+        faiss_bytes = supabase.storage.from_("rag-indexes").download(
+            f"{safe_key}.faiss"
+        )
+        with open(faiss_path, "wb") as f:
+            f.write(faiss_bytes)
+        
+        # Download .chunks.json file
+        chunks_bytes = supabase.storage.from_("rag-indexes").download(
+            f"{safe_key}.chunks.json"
+        )
+        with open(chunks_path, "wb") as f:
+            f.write(chunks_bytes)
+        
+        print(f"✅ Downloaded {safe_key} from Supabase Storage")
+        return True
+    except Exception as e:
+        print(f"⚠️ Supabase Storage download failed: {e}")
+        return False
+
+
+def _delete_from_supabase(safe_key: str) -> bool:
+    """Delete FAISS index and chunks from Supabase Storage."""
+    from auth import supabase
+    try:
+        supabase.storage.from_("rag-indexes").remove([
+            f"{safe_key}.faiss",
+            f"{safe_key}.chunks.json"
+        ])
+        print(f"✅ Deleted {safe_key} from Supabase Storage")
+        return True
+    except Exception as e:
+        print(f"⚠️ Supabase Storage delete failed (non-fatal): {e}")
+        return False
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global embedding_model, whisper_model
@@ -62,19 +140,58 @@ async def lifespan(app: FastAPI):
     print("Models loaded.")
     models.Base.metadata.create_all(bind=engine)
 
-    # Reload all persisted RAG indexes
+    # Try to load indexes from Supabase Storage first
+    from auth import supabase
     loaded = 0
-    for faiss_file in os.listdir(RAG_STORAGE_DIR):
-        if faiss_file.endswith(".faiss"):
+    try:
+        files = supabase.storage.from_("rag-indexes").list()
+        faiss_files = [
+            f["name"] for f in files 
+            if f["name"].endswith(".faiss")
+        ]
+        for faiss_file in faiss_files:
             safe_key    = faiss_file.replace(".faiss", "")
+            chunks_file = f"{safe_key}.chunks.json"
+            faiss_path  = f"{RAG_STORAGE_DIR}/{safe_key}.faiss"
             chunks_path = f"{RAG_STORAGE_DIR}/{safe_key}.chunks.json"
-            if os.path.exists(chunks_path):
-                index  = faiss.read_index(f"{RAG_STORAGE_DIR}/{faiss_file}")
+            
+            # Download if not on disk
+            if not (os.path.exists(faiss_path) and 
+                    os.path.exists(chunks_path)):
+                if not _download_from_supabase(safe_key):
+                    continue
+            
+            try:
+                index  = faiss.read_index(faiss_path)
                 chunks = json.load(open(chunks_path))
-                # Use safe_key as identifier (it already contains user{id}_)
                 rag_indexes[safe_key] = {"index": index, "chunks": chunks}
                 loaded += 1
-    print(f"Reloaded {loaded} RAG indexes from disk.")
+            except Exception as e:
+                print(f"Failed to load {safe_key}: {e}")
+                continue
+    except Exception as e:
+        print(f"⚠️ Could not list Supabase Storage (non-fatal): {e}")
+        # Fall back to local disk
+        for faiss_file in os.listdir(RAG_STORAGE_DIR):
+            if faiss_file.endswith(".faiss"):
+                safe_key    = faiss_file.replace(".faiss", "")
+                chunks_path = f"{RAG_STORAGE_DIR}/{safe_key}.chunks.json"
+                if os.path.exists(chunks_path):
+                    try:
+                        index  = faiss.read_index(
+                            f"{RAG_STORAGE_DIR}/{faiss_file}"
+                        )
+                        chunks = json.load(open(chunks_path))
+                        # Use safe_key as identifier (it already contains user{id}_)
+                        rag_indexes[safe_key] = {
+                            "index": index, 
+                            "chunks": chunks
+                        }
+                        loaded += 1
+                    except Exception:
+                        continue
+    
+    print(f"Reloaded {loaded} RAG indexes.")
 
     yield
     print("Shutting down Clariva API.")
@@ -417,6 +534,9 @@ def delete_source(
         path = f"{RAG_STORAGE_DIR}/{safe_key}{ext}"
         if os.path.exists(path):
             os.remove(path)
+
+    # Also delete from Supabase Storage
+    _delete_from_supabase(safe_key)
 
     return {"message": "Source deleted successfully"}
 
@@ -1172,7 +1292,16 @@ def _load_rag_index(source_identifier: str, owner_id: int) -> bool:
     safe_key = re.sub(r'[^a-zA-Z0-9_-]', '_', scoped)
     faiss_path  = f"{RAG_STORAGE_DIR}/{safe_key}.faiss"
     chunks_path = f"{RAG_STORAGE_DIR}/{safe_key}.chunks.json"
-    if os.path.exists(faiss_path) and os.path.exists(chunks_path):
+    
+    # Try disk first
+    if not (os.path.exists(faiss_path) and os.path.exists(chunks_path)):
+        # Not on disk — try downloading from Supabase Storage
+        print(f"Index not on disk, trying Supabase Storage: {safe_key}")
+        if not _download_from_supabase(safe_key):
+            return False
+            
+    # Load from disk (either was already there or just downloaded)
+    try:
         index  = faiss.read_index(faiss_path)
         chunks = json.load(open(chunks_path))
         rag_indexes[safe_key] = {
@@ -1180,7 +1309,9 @@ def _load_rag_index(source_identifier: str, owner_id: int) -> bool:
             "chunks": chunks,
         }
         return True
-    return False
+    except Exception as e:
+        print(f"Failed to load index {safe_key}: {e}")
+        return False
 
 def _build_rag_index(source_identifier: str, text: str, owner_id: int) -> None:
     """
@@ -1206,6 +1337,9 @@ def _build_rag_index(source_identifier: str, text: str, owner_id: int) -> None:
         json.dump(chunks, f)
         
     print(f"RAG index built and saved: {safe_key} ({len(chunks)} chunks)")
+
+    # Upload to Supabase Storage for persistence
+    _upload_to_supabase(safe_key)
 
 
 def _search_rag_index(source_identifier: str, query: str, k: int = 3) -> str:
