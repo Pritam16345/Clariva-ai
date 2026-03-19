@@ -1,142 +1,188 @@
 # Clariva AI
 
-An open-source, AI-powered knowledge base and research assistant.
+**A full-stack, AI-powered knowledge base and research assistant.**
 
-Feed Clariva a YouTube video, PDF document, or website URL. It ingests the content, builds a vector index, and lets you ask questions with AI-generated answers that cite their source.
+Feed Clariva a YouTube video, PDF, website URL, or audio/video file. It ingests the content, builds a FAISS vector index, and lets you ask questions with streaming AI-generated answers — all within a beautiful three-panel interface.
+
+🔗 **Live Demo:** [clariva-ai.vercel.app](https://clariva-ai.vercel.app)
+
+---
+
+## Features
+
+- 🎥 **YouTube ingestion** — transcript extraction with 6-layer fallback
+- 📄 **PDF & TXT ingestion** — PyMuPDF text extraction
+- 🌐 **Website ingestion** — Trafilatura content scraping
+- 🎙️ **Audio & Video ingestion** — OpenAI Whisper speech-to-text (MP3, MP4, WAV, M4A)
+- 🔍 **RAG-powered Q&A** — FAISS vector search + Sentence-Transformers embeddings
+- ⚡ **Streaming responses** — word-by-word token streaming via Cloudflare Workers AI
+- 💬 **Multi-source chat** — query across multiple knowledge bases simultaneously
+- 📌 **Notes system** — pin and save AI responses for later reference
+- 👍 **Feedback system** — thumbs up/down with per-source accuracy tracking
+- 🔐 **Full auth** — email/password, Google OAuth, OTP password reset via Supabase
+- 🗂️ **Persistent indexes** — FAISS indexes stored in Supabase Storage, survive server restarts
+- 🛡️ **Per-user isolation** — scoped FAISS keys, zero cross-account data leakage
+- ⌨️ **Command palette** — Ctrl+K source search
+- 🌙 **Dark mode** — sleek dark-first UI
 
 ---
 
 ## Architecture
 
-```mermaid
-graph TB
-    subgraph Frontend["Next.js 14 (App Router)"]
-        UI[React Components]
-        Store[Zustand Store]
-        API_Client[API Client + JWT]
-    end
-
-    subgraph Backend["FastAPI"]
-        Auth[JWT Auth]
-        RAG[RAG Pipeline]
-        Stream[SSE Streaming]
-        RL[Rate Limiter]
-    end
-
-    subgraph AI["AI Services"]
-        Whisper[Whisper ASR]
-        ST[SentenceTransformers]
-        CF[Cloudflare Workers AI]
-    end
-
-    subgraph Storage
-        DB[(PostgreSQL)]
-        FAISS[(FAISS Index)]
-        Redis[(Redis)]
-    end
-
-    UI --> Store --> API_Client
-    API_Client -->|Bearer JWT| Auth
-    Auth --> RAG
-    Auth --> Stream
-    RL --> Auth
-    RAG --> ST
-    RAG --> FAISS
-    Stream --> CF
-    RAG --> DB
-    Auth --> DB
-    RL --> Redis
-    RAG --> Whisper
+```
+┌─────────────────────────────────────────────────────────┐
+│                    User Browser                          │
+│         Next.js 14 + React 18 + Zustand                 │
+└──────────────────┬──────────────────┬───────────────────┘
+                   │                  │
+          REST API │        Direct    │ Streaming
+          + JWT    │        fetch     │
+                   ▼                  ▼
+┌──────────────────────┐   ┌──────────────────────────────┐
+│   FastAPI Backend    │   │   Cloudflare Workers AI       │
+│   HuggingFace Spaces │   │   (Llama 3 8B Instruct)      │
+│                      │   └──────────────────────────────┘
+│  • RAG Pipeline      │
+│  • Whisper ASR       │
+│  • Auth (Supabase)   │
+│  • Rate Limiting     │
+└──────┬───────────────┘
+       │
+       ├──────────────────► Supabase PostgreSQL (users, sources, notes)
+       │
+       └──────────────────► Supabase Storage (FAISS indexes persistence)
 ```
 
-## Features
-
-- [x] YouTube video ingestion (Whisper transcription)
-- [x] PDF document ingestion (PyMuPDF)
-- [x] Website content extraction (Trafilatura)
-- [x] RAG-powered Q&A with FAISS vector search
-- [x] SSE streaming chat responses (word-by-word)
-- [x] Multi-source chat (query across all sources)
-- [x] JWT authentication (access + refresh tokens)
-- [x] Answer feedback (thumbs up/down with accuracy stats)
-- [x] Auto-generated source summaries
-- [x] Command palette (Ctrl+K source search)
-- [x] Conversation export as Markdown
-- [x] Rate limiting (slowapi + Redis)
-- [x] Dark/light mode
-- [x] Docker Compose deployment
+---
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|---|---|
 | Frontend | Next.js 14, React 18, TypeScript, Tailwind CSS |
-| State | Zustand |
-| Animations | Framer Motion |
-| Backend | FastAPI, Python 3.11 |
-| Auth | JWT (python-jose), bcrypt (passlib) |
+| State Management | Zustand |
+| Backend | FastAPI, Python 3.10 |
+| Authentication | Supabase Auth (email, Google OAuth, OTP) |
 | Embeddings | SentenceTransformers (all-MiniLM-L6-v2) |
-| Vector Store | FAISS |
-| LLM | Cloudflare Workers AI |
-| ASR | OpenAI Whisper (base) |
-| Database | PostgreSQL (prod) / SQLite (dev) |
-| Rate Limiting | slowapi + Redis |
-| Container | Docker Compose |
+| Vector Store | FAISS (persisted to Supabase Storage) |
+| LLM | Cloudflare Workers AI (Llama 3 8B) |
+| Speech-to-Text | OpenAI Whisper (base model) |
+| Database | Supabase PostgreSQL |
+| File Storage | Supabase Storage |
+| Rate Limiting | slowapi |
+| Frontend Hosting | Vercel |
+| Backend Hosting | HuggingFace Spaces (Docker) |
+
+---
 
 ## Local Setup
 
-### Docker (recommended)
-
-```bash
-cp .env.example .env
-# Edit .env with your secrets
-docker compose up --build
-```
-
-The app will be available at:
-- Frontend: http://localhost:3000
-- API docs: http://localhost:8000/docs
-
-### Manual
-
-**Backend:**
+### Backend
 
 ```bash
 cd backend
 python -m venv acpenv
-source acpenv/bin/activate  # Windows: acpenv\Scripts\activate
+acpenv\Scripts\activate        # Windows
+# source acpenv/bin/activate   # Linux/Mac
 pip install -r requirements.txt
-uvicorn main:app --reload
+pip install openai-whisper
 ```
 
-**Frontend:**
+Create `backend/.env`:
+```env
+DATABASE_URL=postgresql://...
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+CLOUDFLARE_WORKER_URL=https://your-worker.workers.dev
+ALLOWED_ORIGINS=http://localhost:3000
+FRONTEND_URL=http://localhost:3000
+SECRET_KEY=your-secret-key
+```
+
+```bash
+uvicorn main:app --reload
+# API docs at http://localhost:8000/docs
+```
+
+### Cloudflare Worker
+
+```bash
+cd backend/my-ai-worker
+npm install
+npx wrangler deploy
+```
+
+### Frontend
 
 ```bash
 cd frontend
 npm install
-npm run dev
 ```
 
-## Design Decisions
+Create `frontend/.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_CF_WORKER_URL=https://your-worker.workers.dev
+```
 
-### Why FAISS over Qdrant?
-
-FAISS runs entirely in-process with zero infrastructure overhead. For a single-user or small-team knowledge base where the index fits in memory, FAISS provides sub-millisecond search without needing a separate vector database service. If the project scales to millions of documents or needs distributed search, migrating to Qdrant or Pinecone would be straightforward since the embedding layer is decoupled.
-
-### Why Whisper base?
-
-The `base` model (74M parameters) offers the best trade-off between transcription accuracy and speed for a self-hosted application. It runs on CPU in ~1x real-time, which is acceptable for on-demand video ingestion. The `small` or `medium` models provide marginal accuracy gains but require significantly more compute and memory.
-
-### Why Cloudflare Workers for LLM?
-
-Cloudflare Workers AI provides free-tier access to open-source LLMs (Llama, Mistral) with edge deployment, eliminating the need for GPU infrastructure or expensive API keys. The worker acts as a thin proxy, making it easy to swap the underlying model or switch to OpenAI/Anthropic by changing a single URL.
-
-## Screenshots
-
-| Auth | Dashboard | Chat |
-|------|-----------|------|
-| ![Auth](screenshots/auth.png) | ![Dashboard](screenshots/dashboard.png) | ![Chat](screenshots/chat.png) |
+```bash
+npm run dev
+# App at http://localhost:3000
+```
 
 ---
 
-Built with care by [Pritam Kundu](https://github.com/Pritam16345).
+## Deployment
+
+| Service | Platform | Notes |
+|---|---|---|
+| Frontend | Vercel | Auto-deploys on push to main |
+| Backend | HuggingFace Spaces | Docker container |
+| Database | Supabase | PostgreSQL + Storage |
+| AI Worker | Cloudflare Workers | `npx wrangler deploy` |
+| ffmpeg | System dependency | Required for audio/video |
+
+---
+
+## Design Decisions
+
+### Why FAISS over Pinecone/Qdrant?
+FAISS runs entirely in-process with zero infrastructure overhead. For a personal or small-team knowledge base, it provides sub-millisecond search without needing a separate vector database service. FAISS indexes are persisted to Supabase Storage so they survive container restarts. Migrating to Pinecone would be straightforward since the embedding layer is fully decoupled.
+
+### Why Whisper base?
+The `base` model (74M parameters) offers the best trade-off between accuracy and speed for CPU inference. It runs at ~1x real-time on CPU, acceptable for on-demand ingestion. The `small`/`medium` models provide marginal gains but require significantly more memory — unsuitable for free-tier hosting.
+
+### Why Cloudflare Workers for LLM?
+Cloudflare Workers AI provides free-tier access to open-source LLMs (Llama 3) with global edge deployment, eliminating GPU infrastructure costs. The worker acts as a thin proxy, making it trivial to swap the underlying model or migrate to OpenAI/Anthropic by changing a single URL. Calling the worker directly from the browser also reduces backend load and improves streaming latency.
+
+### Why call Cloudflare Worker from the browser directly?
+The backend retrieves and ranks context chunks (RAG), then returns them to the frontend. The frontend calls the Cloudflare Worker directly for token streaming. This eliminates one network hop through the backend, improves streaming latency, and works around HuggingFace's outbound network restrictions on free tier.
+
+---
+
+## Repository Structure
+
+```
+Clariva-ai/
+├── backend/
+│   ├── main.py          # FastAPI app, all endpoints
+│   ├── auth.py          # Supabase auth + JWT dependency
+│   ├── crud.py          # Database CRUD operations
+│   ├── models.py        # SQLAlchemy ORM models
+│   ├── database.py      # SQLAlchemy engine setup
+│   ├── migrate.py       # DB migration script
+│   ├── requirements.txt
+│   ├── Dockerfile       # HuggingFace deployment
+│   └── my-ai-worker/    # Cloudflare Worker
+│       └── src/index.ts
+├── frontend/
+│   ├── app/             # Next.js App Router pages
+│   ├── components/      # React components
+│   ├── lib/api.ts       # API client
+│   └── store/           # Zustand store
+└── README.md
+```
+
+---
+
+Built with care by [Pritam Kundu](https://github.com/Pritam16345)
