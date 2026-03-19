@@ -1,9 +1,0 @@
-{
-  "python.defaultInterpreterPath": "${workspaceFolder}/ai_content_processor/acpenv/Scripts/python.exe",
-  "python.pythonPath": "${workspaceFolder}/ai_content_processor/acpenv/Scripts/python.exe",
-  "python.languageServer": "None",
-  "pylance.importStrategy": "fromEnvironment",
-  "python.analysis.extraPaths": [
-    "${workspaceFolder}/ai_content_processor"
-  ]
-}
