@@ -18,7 +18,7 @@ export function IngestPanel() {
   const [loadingMessage, setLoadingMessage] = useState("Processing...");
   const [progress, setProgress] = useState(0);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [youtubeError, setYoutubeError] = useState<{message: string, suggestions: string[]} | null>(null);
+  const [youtubeError, setYoutubeError] = useState<{ message: string, suggestions: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const selectedFile = useRef<File | null>(null);
 
@@ -26,7 +26,7 @@ export function IngestPanel() {
     if (!currentUser) return;
     const processUrl = retryUrl || url.trim();
     const file = selectedFile.current;
-    
+
     if (!processUrl && !file) {
       toast.error("Enter a URL or upload a PDF/TXT");
       return;
@@ -67,7 +67,7 @@ export function IngestPanel() {
       const sources = await api.getSources(currentUser.id);
       setSources(sources);
       setActiveSource(result);
-      
+
       setProgress(100);
       setUrl("");
       setFileName("");
@@ -101,7 +101,7 @@ export function IngestPanel() {
     setIsDragOver(false);
     const f = e.dataTransfer.files[0];
     const allowedTypes = [
-      "application/pdf", "text/plain", 
+      "application/pdf", "text/plain",
       "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4", "audio/x-m4a",
       "video/mp4", "video/quicktime", "video/webm", "video/x-matroska"
     ];
@@ -114,15 +114,15 @@ export function IngestPanel() {
   }, []);
 
   return (
-    <div className="p-[20px_16px_16px_16px] relative overflow-hidden">
+    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm relative overflow-hidden">
       {/* Progress bar background */}
       {isProcessing && (
-        <div 
-          className="absolute inset-y-0 left-0 bg-primary/5 transition-all duration-500 ease-out z-0" 
-          style={{ width: `${progress}%` }} 
+        <div
+          className="absolute inset-y-0 left-0 bg-primary/5 transition-all duration-500 ease-out z-0"
+          style={{ width: `${progress}%` }}
         />
       )}
-      
+
       <div className="relative z-10 flex flex-col gap-3">
         <div className="relative">
           <LinkIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
@@ -131,7 +131,7 @@ export function IngestPanel() {
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleProcess()}
             placeholder="YouTube or website URL..."
-            className="pl-[36px] h-auto p-[11px_14px] w-full bg-[#0e0e16] border border-[#252535] text-[#f0f0ec] placeholder:text-[#4a4a5a] rounded-[10px] text-[14px] shadow-none focus-visible:ring-0 focus:border-[rgba(124,106,245,0.5)]"
+            className="pl-9 h-11 bg-background border-border shadow-none rounded-xl text-sm"
           />
         </div>
 
@@ -140,11 +140,10 @@ export function IngestPanel() {
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={onDrop}
-            className={`flex flex-col items-center justify-center w-full bg-transparent border border-dashed rounded-[10px] p-[11px_14px] text-[14px] cursor-pointer transition-all col-span-2 ${
-              isDragOver || fileName
-                ? "border-[rgba(124,106,245,0.5)] text-[#7c6af5] bg-[rgba(124,106,245,0.04)]"
-                : "border-[#353545] text-[#9a9a9a] hover:border-[rgba(124,106,245,0.4)] hover:text-[#f0f0ec] hover:bg-[rgba(124,106,245,0.04)]"
-            }`}
+            className={`flex flex-col items-center justify-center p-3 border border-dashed rounded-xl cursor-pointer text-sm font-medium transition-all col-span-2 ${isDragOver || fileName
+                ? "border-primary text-primary bg-primary/5"
+                : "border-border text-muted-foreground hover:border-primary/50 hover:bg-secondary"
+              }`}
           >
             <input
               ref={fileRef}
@@ -172,9 +171,9 @@ export function IngestPanel() {
               ))}
             </ul>
             <div className="flex flex-col gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full text-xs h-8 border-orange-500/30 hover:bg-orange-500/10"
                 onClick={() => handleProcess(url)}
               >
@@ -186,23 +185,24 @@ export function IngestPanel() {
 
         {isProcessing ? (
           <div className="w-full flex flex-col overflow-hidden">
-            <div className="w-full truncate text-[14px] text-[#9a9a9a] p-[12px_14px] rounded-[10px] bg-[#0e0e16] border border-[#252535] text-center flex items-center justify-center gap-2">
+            <div className="w-full truncate text-sm text-muted-foreground px-3 py-2 rounded-lg bg-secondary border border-border text-center flex items-center justify-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin shrink-0" />
               <span className="truncate">{loadingMessage}</span>
             </div>
-            <div className="text-xs text-[#4a4a5a] text-center mt-2">
+            <div className="text-xs text-muted-foreground text-center mt-1">
               Large files may take a few minutes
             </div>
           </div>
         ) : (
-          <button
+          <Button
             onClick={() => handleProcess()}
             disabled={!url && !fileName}
-            className="w-full bg-[#7c6af5] text-white border-none rounded-[10px] p-[12px_14px] text-[14px] font-[600] flex items-center justify-center gap-2 cursor-pointer hover:bg-[#6d5ce6] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm shrink-0"
+            variant="default"
+            className="w-full h-11 rounded-xl text-sm font-semibold shadow-sm gap-2 shrink-0"
           >
             <Plus className="h-4 w-4 shrink-0" />
             <span className="truncate">Add to Knowledge Base</span>
-          </button>
+          </Button>
         )}
       </div>
     </div>

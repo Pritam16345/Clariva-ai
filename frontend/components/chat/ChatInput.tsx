@@ -42,10 +42,10 @@ export function ChatInput({
   const isOverLimit = value.length > maxChars;
 
   return (
-    <div className="p-[16px_24px_20px] border-t border-[#252535] bg-[#08080d] shrink-0">
+    <div className="px-6 pb-4 pt-3 border-t border-border bg-background shrink-0">
       <div
         className={cn(
-          "flex items-end gap-2.5 rounded-[14px] border border-[#252535] bg-[#0e0e16] p-[14px_16px] transition-all",
+          "flex items-end gap-2.5 rounded-[12px] border border-[#252535] bg-[#0e0e16] px-4 py-2.5 transition-all",
           "focus-within:border-[rgba(124,106,245,0.5)] focus-within:shadow-[0_0_0_3px_rgba(124,106,245,0.08)]"
         )}
       >
@@ -56,15 +56,15 @@ export function ChatInput({
           onKeyDown={handleKeyDown}
           rows={1}
           placeholder="Ask anything about this source…"
-          className="flex-1 bg-transparent border-none outline-none text-[15px] leading-[1.6] text-[#f0f0ec] placeholder:text-[#4a4a5a] resize-none max-h-[120px] overflow-y-auto font-body"
+          className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground resize-none max-h-[120px] overflow-y-auto leading-relaxed font-body"
         />
         <button
           onClick={onSend}
           disabled={disabled || !value.trim() || isOverLimit}
           className={cn(
-            "w-[36px] h-[36px] rounded-[8px] bg-[#7c6af5] border-none text-white flex items-center justify-center shrink-0 transition-all cursor-pointer",
+            "w-9 h-9 rounded-lg bg-[#7c6af5] text-white flex items-center justify-center shrink-0 transition-all",
             "hover:bg-[#6d5ce6]",
-            "disabled:bg-[#252535] disabled:text-[#4a4a5a] disabled:cursor-not-allowed"
+            "disabled:opacity-40 disabled:cursor-not-allowed"
           )}
           title="Send"
         >
@@ -72,7 +72,7 @@ export function ChatInput({
         </button>
       </div>
 
-      <div className="flex justify-between items-center p-[8px_4px_0] mt-1.5">
+      <div className="flex justify-between items-center mt-1.5 px-1">
         <span
           className={cn(
             "text-[12px]",
