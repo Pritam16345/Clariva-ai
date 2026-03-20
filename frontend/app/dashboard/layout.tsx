@@ -121,55 +121,54 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             animate={{ width: 340, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="shrink-0 h-screen bg-cogni-surface-2 border-r border-border flex flex-col overflow-hidden shadow-sm"
+            className="shrink-0 h-screen bg-[#0a0a0f] border-r border-[#252535] flex flex-col overflow-hidden shadow-sm"
           >
             <div className="w-[340px] flex flex-col h-full overflow-hidden p-0">
               {/* Header */}
               <div className="h-[1px] w-full" style={{ background: "linear-gradient(90deg, #8b5cf6, transparent)" }} />
-              <div className="flex items-center justify-between p-5 pb-4 bg-card border-b border-border">
-                <div className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
-                  <span className="text-primary"><BrandIcon /></span>
+              <div className="flex items-center justify-between px-[20px] h-[64px] bg-[#08080d] border-b border-[#252535] shrink-0">
+                <div className="flex items-center gap-2 font-display text-lg font-bold">
+                  <span className="text-[#8b5cf6]"><BrandIcon /></span>
                   <span className="tracking-tight text-white">Clariva <span className="text-[#8b5cf6]">AI</span></span>
                 </div>
 
                 <div className="flex items-center gap-1">
-                  <button onClick={() => setCommandPaletteOpen(true)} className="p-1.5 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors" title="Search sources (Ctrl+K)">
+                  <button onClick={() => setCommandPaletteOpen(true)} className="p-1.5 rounded-md text-[#6b7280] hover:text-[#f0f0ec] transition-colors" title="Search sources (Ctrl+K)">
                     <Command className="h-4 w-4" />
                   </button>
-                  <div className="flex items-center gap-1.5 ml-1 bg-secondary border border-border rounded-full pl-0.5 pr-2.5 py-0.5 text-xs text-muted-foreground">
-                    <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px] font-semibold font-display shrink-0">
+                  <div className="flex items-center gap-2 ml-1 bg-[#0e0e16] border border-[#252535] rounded-full pl-[8px] pr-[12px] py-[6px] text-[13px] text-[#9a9a9a]">
+                    <div className="w-[28px] h-[28px] rounded-full bg-[#7c6af5] text-white flex items-center justify-center text-[11px] font-[700] shrink-0">
                       {currentUser.name.charAt(0).toUpperCase()}
                     </div>
                     <span>{currentUser.name.split(" ")[0]}</span>
-                    <button onClick={handleLogout} className="p-1 text-muted-foreground hover:text-foreground transition-colors" title="Sign out">
+                    <button onClick={handleLogout} className="text-[#6b7280] hover:text-[#ef4444] transition-colors" title="Sign out">
                       <LogOut className="h-[14px] w-[14px]" />
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div className="px-5 pt-5 pb-2">
+              <div className="pt-0 pb-0 shrink-0">
                 <IngestPanel />
               </div>
 
-              <div className="flex-1 flex flex-col min-h-0 px-5">
-                <div className="flex items-center justify-between mb-3 mt-4">
+              <div className="flex-1 flex flex-col min-h-0 border-t border-[#252535]">
+                <div className="flex items-center justify-between p-[16px_16px_10px_16px] shrink-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Sources</span>
-                    <span className="bg-secondary border border-border rounded-full px-2 py-px text-[11px] font-display font-semibold text-muted-foreground">{allSources.length}</span>
+                    <span className="text-[11px] tracking-[0.1em] font-[600] text-[#6b7280] uppercase">SOURCES ({allSources.length})</span>
                   </div>
-                  <div className="flex border border-border rounded-lg overflow-hidden bg-card">
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => setViewMode("grid")}
-                      className={`p-1.5 ${viewMode === "grid" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      className={`p-1 rounded-md transition-colors ${viewMode === "grid" ? "text-[#f0f0ec] bg-[#252535]/50" : "text-[#6b7280] hover:text-[#f0f0ec]"}`}
                     >
-                      <LayoutGrid className="w-3.5 h-3.5" />
+                      <LayoutGrid className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setViewMode("list")}
-                      className={`p-1.5 border-l border-border ${viewMode === "list" ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      className={`p-1 rounded-md transition-colors ${viewMode === "list" ? "text-[#f0f0ec] bg-[#252535]/50" : "text-[#6b7280] hover:text-[#f0f0ec]"}`}
                     >
-                      <List className="w-3.5 h-3.5" />
+                      <List className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -187,17 +186,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         setSelectedSourceIds(allSources.map(s => s.id));
                       }
                     }}
-                    className={`flex items-center gap-2 w-full px-4 py-2.5 mt-3 mb-2 rounded-xl border text-sm font-medium transition-all shadow-sm ${selectedSourceIds.length === allSources.length
-                      ? "bg-blue-500/10 text-blue-600 border-blue-500/20"
-                      : "bg-card border-border text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground"
+                    className={`flex items-center gap-2 mx-[16px] mb-[12px] p-[10px_14px] rounded-[10px] border text-[13px] font-medium transition-all shadow-sm shrink-0 w-[calc(100%-32px)] ${selectedSourceIds.length === allSources.length
+                      ? "bg-[rgba(124,106,245,0.06)] text-[#f0f0ec] border-[rgba(124,106,245,0.4)]"
+                      : "bg-[#0e0e16] border-[#252535] text-[#9a9a9a] hover:border-[rgba(124,106,245,0.4)] hover:text-[#f0f0ec] hover:bg-[rgba(124,106,245,0.06)]"
                       }`}
                   >
-                    <Layers className="h-[18px] w-[18px] shrink-0" />
+                    <Layers className="h-4 w-4 shrink-0" />
                     <span>Chat with all sources</span>
                   </motion.button>
                 )}
 
-                <ScrollArea className="flex-1 mt-2 -mx-2 px-2">
+                <ScrollArea className="flex-1 w-full flex flex-col min-h-0">
                   <AnimatePresence mode="popLayout">
                     {filteredSources.length === 0 ? (
                       <div className="text-center py-12 px-4">
@@ -208,7 +207,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         <p className="text-muted-foreground text-xs leading-relaxed">Add a URL or PDF above to start building your knowledge base.</p>
                       </div>
                     ) : (
-                      <div className={viewMode === "grid" ? "grid grid-cols-2 gap-3 pb-6 text-left" : "flex flex-col gap-2 pb-6"}>
+                      <div className={viewMode === "grid" ? "grid grid-cols-2 gap-2 px-[16px] pb-[16px] text-left" : "flex flex-col gap-2 px-[16px] pb-[16px]"}>
                         {filteredSources.map((source) => (
                           <SourceItem
                             key={source.id}

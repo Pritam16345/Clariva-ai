@@ -114,7 +114,7 @@ export function IngestPanel() {
   }, []);
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm relative overflow-hidden">
+    <div className="p-[20px_16px_16px_16px] relative overflow-hidden">
       {/* Progress bar background */}
       {isProcessing && (
         <div 
@@ -131,7 +131,7 @@ export function IngestPanel() {
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleProcess()}
             placeholder="YouTube or website URL..."
-            className="pl-9 h-11 bg-background border-border shadow-none rounded-xl text-sm"
+            className="pl-[36px] h-auto p-[11px_14px] w-full bg-[#0e0e16] border border-[#252535] text-[#f0f0ec] placeholder:text-[#4a4a5a] rounded-[10px] text-[14px] shadow-none focus-visible:ring-0 focus:border-[rgba(124,106,245,0.5)]"
           />
         </div>
 
@@ -140,10 +140,10 @@ export function IngestPanel() {
             onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
             onDragLeave={() => setIsDragOver(false)}
             onDrop={onDrop}
-            className={`flex flex-col items-center justify-center p-3 border border-dashed rounded-xl cursor-pointer text-sm font-medium transition-all col-span-2 ${
+            className={`flex flex-col items-center justify-center w-full bg-transparent border border-dashed rounded-[10px] p-[11px_14px] text-[14px] cursor-pointer transition-all col-span-2 ${
               isDragOver || fileName
-                ? "border-primary text-primary bg-primary/5"
-                : "border-border text-muted-foreground hover:border-primary/50 hover:bg-secondary"
+                ? "border-[rgba(124,106,245,0.5)] text-[#7c6af5] bg-[rgba(124,106,245,0.04)]"
+                : "border-[#353545] text-[#9a9a9a] hover:border-[rgba(124,106,245,0.4)] hover:text-[#f0f0ec] hover:bg-[rgba(124,106,245,0.04)]"
             }`}
           >
             <input
@@ -186,24 +186,23 @@ export function IngestPanel() {
 
         {isProcessing ? (
           <div className="w-full flex flex-col overflow-hidden">
-            <div className="w-full truncate text-sm text-muted-foreground px-3 py-2 rounded-lg bg-secondary border border-border text-center flex items-center justify-center gap-2">
+            <div className="w-full truncate text-[14px] text-[#9a9a9a] p-[12px_14px] rounded-[10px] bg-[#0e0e16] border border-[#252535] text-center flex items-center justify-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin shrink-0" />
               <span className="truncate">{loadingMessage}</span>
             </div>
-            <div className="text-xs text-muted-foreground text-center mt-1">
+            <div className="text-xs text-[#4a4a5a] text-center mt-2">
               Large files may take a few minutes
             </div>
           </div>
         ) : (
-          <Button
+          <button
             onClick={() => handleProcess()}
             disabled={!url && !fileName}
-            variant="default"
-            className="w-full h-11 rounded-xl text-sm font-semibold shadow-sm gap-2 shrink-0"
+            className="w-full bg-[#7c6af5] text-white border-none rounded-[10px] p-[12px_14px] text-[14px] font-[600] flex items-center justify-center gap-2 cursor-pointer hover:bg-[#6d5ce6] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm shrink-0"
           >
             <Plus className="h-4 w-4 shrink-0" />
             <span className="truncate">Add to Knowledge Base</span>
-          </Button>
+          </button>
         )}
       </div>
     </div>

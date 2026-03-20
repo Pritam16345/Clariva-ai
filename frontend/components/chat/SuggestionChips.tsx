@@ -78,10 +78,9 @@ export function SuggestionChips({ type, visible, onSelect }: SuggestionChipsProp
           whileTap={{ scale: 0.97 }}
           onClick={() => onSelect(q)}
           className={cn(
-            "px-3 py-[5px] border border-input rounded-full text-xs text-muted-foreground",
-            "cursor-pointer transition-colors",
-            "hover:border-primary hover:text-cogni-accent-2 hover:bg-cogni-accent-glow",
-            "bg-card"
+            "px-4 py-2 bg-[#0e0e16] border border-[#252535] text-[#9a9a9a] rounded-full text-[13px]",
+            "cursor-pointer transition-all duration-200 ease-in-out",
+            "hover:border-[rgba(124,106,245,0.4)] hover:text-[#f0f0ec] hover:bg-[rgba(124,106,245,0.06)]"
           )}
         >
           {q}

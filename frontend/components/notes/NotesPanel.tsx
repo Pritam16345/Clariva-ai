@@ -11,12 +11,12 @@ import { cn, getSourceType, getSourceTypeLabel } from "@/lib/utils";
 import type { Note, Source } from "@/lib/types";
 
 const typeBadgeMap: Record<string, string> = {
-  yt: "text-red-500 bg-red-500/10",
-  web: "text-blue-500 bg-blue-500/10",
-  pdf: "text-orange-500 bg-orange-500/10",
-  audio: "text-purple-500 bg-purple-500/10",
-  video: "text-indigo-500 bg-indigo-500/10",
-  text: "text-gray-500 bg-gray-500/10",
+  yt: "text-[#fca5a5] bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)]",
+  web: "text-[#93c5fd] bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.3)]",
+  pdf: "text-[#fca5a5] bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)]",
+  audio: "text-[#b8aef8] bg-[rgba(124,106,245,0.12)] border border-[rgba(124,106,245,0.35)]",
+  video: "text-[#b8aef8] bg-[rgba(124,106,245,0.1)] border border-[rgba(124,106,245,0.3)]",
+  text: "text-[#d1d5db] bg-[rgba(107,114,128,0.1)] border border-[rgba(107,114,128,0.3)]",
 };
 
 export function NotesPanel() {
@@ -63,8 +63,8 @@ export function NotesPanel() {
   const unpinnedNotes = notes.filter((n) => !pinnedNoteIds.has(n.id));
 
   return (
-    <div className="flex flex-col h-full bg-cogni-surface-2 border-l border-border select-none">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card">
+    <div className="flex flex-col h-full bg-[#0a0a0f] border-l border-[#252535] select-none">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[#252535] bg-[#0e0e16]">
         <h3 className="font-display font-semibold text-lg flex items-center gap-2">
           <FileText className="w-5 h-5 text-primary" />
           Saved Notes
@@ -163,7 +163,7 @@ function NoteCard({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="relative bg-card border border-border p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow group text-left cursor-text"
+      className="relative bg-[#0e0e16] border border-[#252535] hover:border-[rgba(124,106,245,0.3)] p-4 rounded-[10px] shadow-sm hover:shadow-md transition-shadow group text-left cursor-text"
     >
       <div className="flex justify-between items-start mb-3 gap-2">
         <span className={cn("text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md truncate max-w-[70%]", badgeClass)}>
@@ -190,13 +190,13 @@ function NoteCard({
         </div>
       </div>
       
-      <p className="text-[13px] font-bold text-foreground mb-2 leading-snug break-words">
+      <p className="text-[13px] font-[600] text-[#f0f0ec] mb-2 leading-snug break-words">
         {note.question}
       </p>
       
       <div className="relative">
         <p className={cn(
-          "text-[12px] text-muted-foreground leading-relaxed break-words whitespace-pre-wrap",
+          "text-[12px] text-[#6b7280] leading-[1.6] break-words whitespace-pre-wrap",
           !expanded && "line-clamp-3"
         )}>
           {note.answer}

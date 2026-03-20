@@ -15,12 +15,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const CF_WORKER_URL = process.env.NEXT_PUBLIC_CF_WORKER_URL || "https://my-ai-worker.pritam-kundu.workers.dev";
 
 const typeBadgeMap: Record<string, string> = {
-  yt: "text-red-500 bg-red-500/10",
-  web: "text-blue-500 bg-blue-500/10",
-  pdf: "text-orange-500 bg-orange-500/10",
-  audio: "text-purple-500 bg-purple-500/10",
-  video: "text-indigo-500 bg-indigo-500/10",
-  text: "text-gray-500 bg-gray-500/10",
+  yt: "text-[#fca5a5] bg-[rgba(239,68,68,0.1)] border-[#fca5a5]/30",
+  web: "text-[#93c5fd] bg-[rgba(59,130,246,0.1)] border-[rgba(59,130,246,0.3)]",
+  pdf: "text-[#fca5a5] bg-[rgba(239,68,68,0.1)] border-[rgba(239,68,68,0.3)]",
+  audio: "text-[#b8aef8] bg-[rgba(124,106,245,0.12)] border-[rgba(124,106,245,0.35)]",
+  video: "text-[#b8aef8] bg-[rgba(124,106,245,0.1)] border-[rgba(124,106,245,0.3)]",
+  text: "text-[#d1d5db] bg-[rgba(107,114,128,0.1)] border-[rgba(107,114,128,0.3)]",
 };
 
 export function ChatWindow() {
@@ -260,7 +260,7 @@ export function ChatWindow() {
       animate={{ opacity: 1, scale: 1 }}
       className="flex flex-col h-full bg-background relative overflow-hidden"
     >
-      <header className="relative z-20 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border bg-card shadow-sm shrink-0">
+      <header className="relative z-20 flex items-center justify-between px-[24px] h-[56px] border-b border-[#252535] bg-[#08080d] shrink-0">
         <div className="flex items-center gap-3 min-w-0 flex-1 lg:ml-0 ml-10"> {/* left margin for mobile toggle */}
           {isMultiSourceMode ? (
             <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider shrink-0 bg-primary/10 text-primary border border-primary/20">
@@ -269,51 +269,48 @@ export function ChatWindow() {
           ) : (
             <span
               className={cn(
-                "px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider shrink-0 border border-current/20",
+                "px-2.5 py-0.5 rounded-[6px] text-[11px] font-bold uppercase tracking-[0.08em] shrink-0 border",
                 typeBadgeMap[type]
               )}
             >
               {getSourceTypeLabel(type)}
             </span>
           )}
-          <div className="min-w-0">
-            <h2 className="font-display text-base font-semibold text-foreground truncate">
+          <div className="min-w-0 ml-[10px]">
+            <h2 className="font-['Playfair_Display'] text-[16px] font-[600] text-[#f0f0ec] truncate">
               {selectedSourceIds.length > 1 ? "Knowledge Base Chat" : activeSourceObj?.title || "Untitled"}
             </h2>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0 ml-4">
+        <div className="flex items-center gap-[8px] shrink-0 ml-4">
           <button
             onClick={handleClear}
             disabled={isStreaming}
-            className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-all disabled:opacity-40"
+            className="bg-transparent border border-[#252535] rounded-[8px] p-[7px_10px] text-[#6b7280] hover:border-[#353545] hover:text-[#f0f0ec] transition-colors flex items-center justify-center disabled:opacity-40"
             title="Clear chat"
           >
-            <Trash2 className="w-[18px] h-[18px]" />
+            <Trash2 className="w-[16px] h-[16px]" />
           </button>
           <button
             onClick={handleExport}
-            className="p-2 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-all flex items-center gap-1.5"
+            className="bg-transparent border border-[#252535] rounded-[8px] p-[7px_10px] text-[#6b7280] hover:border-[#353545] hover:text-[#f0f0ec] transition-colors flex items-center justify-center gap-1.5"
             title="Export as Markdown"
           >
-            <Download className="w-[18px] h-[18px]" />
+            <Download className="w-[16px] h-[16px]" />
           </button>
-
-          <div className="w-[1px] h-6 bg-border mx-1" />
 
           <button
             onClick={() => setIsStudioOpen(!isStudioOpen)}
             className={cn(
-              "p-2 rounded-md transition-all flex items-center gap-2 font-medium text-sm",
+              "bg-transparent border border-[#252535] rounded-[8px] p-[7px_10px] transition-colors flex items-center gap-2 text-[13px] font-medium",
               isStudioOpen
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                ? "text-[#f0f0ec] border-[rgba(124,106,245,0.4)] bg-[rgba(124,106,245,0.06)]"
+                : "text-[#6b7280] hover:border-[#353545] hover:text-[#f0f0ec]"
             )}
             title="Toggle Notes panel"
           >
-            {isStudioOpen ? <PanelRightClose className="w-[18px] h-[18px]" /> : <PanelRightOpen className="w-[18px] h-[18px]" />}
-            <span className="hidden sm:inline">Notes</span>
+            {isStudioOpen ? <PanelRightClose className="w-[16px] h-[16px]" /> : <PanelRightOpen className="w-[16px] h-[16px]" />}
           </button>
         </div>
       </header>
@@ -347,34 +344,36 @@ export function ChatWindow() {
               className="text-center mt-12 flex flex-col items-center"
             >
               {selectedSourceIds.length <= 1 && activeSourceObj && (
-                <>
-                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-6 text-primary">
-                    <Headphones className="w-8 h-8 opacity-50" />
+                <div className="flex flex-col items-center justify-center p-[40px]">
+                  <div className="w-[64px] h-[64px] rounded-[16px] bg-[#0e0e16] border border-[#252535] flex items-center justify-center mb-[24px] text-[#6b7280]">
+                    <Headphones className="w-[28px] h-[28px]" />
                   </div>
-                  <h3 className="font-display text-2xl font-semibold mb-2">Dive into this source</h3>
-                  <p className="text-muted-foreground mb-10 max-w-sm">
+                  <h3 className="font-['Playfair_Display'] font-[700] text-[28px] text-[#f0f0ec] mb-[12px]">Dive into this source</h3>
+                  <p className="text-[#6b7280] text-[15px] leading-[1.7] max-w-[420px] text-center mb-[32px]">
                     Ask questions, get summaries, or open the Studio panel to generate audio overviews.
                   </p>
-                  <SuggestionChips
-                    type={type}
-                    visible={true}
-                    onSelect={(q) => {
-                      setInputValue(q);
-                      setTimeout(() => handleSendDirect(q), 50);
-                    }}
-                  />
-                </>
+                  <div className="flex flex-wrap gap-[8px] justify-center">
+                    <SuggestionChips
+                      type={type}
+                      visible={true}
+                      onSelect={(q) => {
+                        setInputValue(q);
+                        setTimeout(() => handleSendDirect(q), 50);
+                      }}
+                    />
+                  </div>
+                </div>
               )}
               {selectedSourceIds.length > 1 && (
-                <>
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6 text-primary">
-                    <Layers className="w-8 h-8" />
+                <div className="flex flex-col items-center justify-center p-[40px]">
+                  <div className="w-[64px] h-[64px] rounded-[16px] bg-[#0e0e16] border border-[#252535] flex items-center justify-center mb-[24px] text-[#6b7280]">
+                    <Layers className="w-[28px] h-[28px]" />
                   </div>
-                  <h3 className="font-display text-2xl font-semibold mb-2">Multi-Source Analysis</h3>
-                  <p className="text-muted-foreground max-w-sm">
+                  <h3 className="font-['Playfair_Display'] font-[700] text-[28px] text-[#f0f0ec] mb-[12px]">Multi-Source Analysis</h3>
+                  <p className="text-[#6b7280] text-[15px] leading-[1.7] max-w-[420px] text-center mb-[32px]">
                     Ask questions across all the documents, videos, and websites in your knowledge base.
                   </p>
-                </>
+                </div>
               )}
             </motion.div>
           ) : (
@@ -391,16 +390,16 @@ export function ChatWindow() {
         </div>
       </div>
 
-      {/* Input Area — Anchored at bottom inside the centered column layout */}
-      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background via-background to-transparent pt-10 pb-6 px-4 sm:px-6 z-20 pointer-events-none">
-        <div className="max-w-[768px] mx-auto pointer-events-auto">
+      {/* Input Area */}
+      <div className="w-full shrink-0 z-20 bg-[#08080d]">
+        <div className="max-w-[768px] mx-auto">
           <ChatInput
             value={inputValue}
             onChange={setInputValue}
             onSend={handleSend}
             disabled={isStreaming}
           />
-          <div className="text-center mt-3 text-[11px] text-muted-foreground/60">
+          <div className="text-center text-[12px] text-[#4a4a5a] pb-[20px] px-6">
             Clariva AI can make mistakes. Verify important information with citations.
           </div>
         </div>
