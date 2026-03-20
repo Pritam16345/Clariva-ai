@@ -1,9 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
+    --bg:           #0a0a0f;
+    --surface:      #111118;
+    --surface-hover:#1a1a24;
+    --border:       #2a2a3a;
+    --accent:       #8b5cf6;
+    --accent-hover: #7c3aed;
+    --accent-glow:  rgba(139, 92, 246, 0.15);
+    --text:         #f0f0ec;
+    --text-muted:   #9a9a9a;
+    --success:      #10b981;
+    --error:        #ef4444;
+
+
     --background: 60 10% 98%; /* #FAFAF8 */
     --foreground: 240 10% 12%; /* #1c1c1f */
     
@@ -88,9 +103,12 @@
   * {
     @apply border-border;
   }
+  html { scroll-behavior: smooth; }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
   }
+  h1, h2 { font-family: 'Playfair Display', serif; }
 }
 
 /* Scrollbar styling */

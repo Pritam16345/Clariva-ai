@@ -125,10 +125,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             <div className="w-[340px] flex flex-col h-full overflow-hidden p-0">
               {/* Header */}
+              <div className="h-[1px] w-full" style={{ background: "linear-gradient(90deg, #8b5cf6, transparent)" }} />
               <div className="flex items-center justify-between p-5 pb-4 bg-card border-b border-border">
                 <div className="flex items-center gap-2 font-display text-lg font-bold text-foreground">
                   <span className="text-primary"><BrandIcon /></span>
-                  <span className="tracking-tight">Clariva</span>
+                  <span className="tracking-tight text-white">Clariva <span className="text-[#8b5cf6]">AI</span></span>
                 </div>
 
                 <div className="flex items-center gap-1">

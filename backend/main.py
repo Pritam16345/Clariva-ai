@@ -460,9 +460,9 @@ def verify_otp_endpoint(body: VerifyOTPRequest, db: Session = Depends(get_db)):
     from auth import supabase
     try:
         # Verify the 6-digit OTP
-        res = supabase.auth.verify_otp({"email": body.email, "token": body.token, "type": "recovery"})
+        res = supabase.auth.verify_otp({"email": body.email, "token": body.token, "type": "email"})
         if not res.session or not res.user:
-            raise ValueError("Invalid recovery token")
+            raise ValueError("Invalid OTP token")
             
         # Update user password utilizing new recovery session
         supabase.auth.update_user({"password": body.new_password})

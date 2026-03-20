@@ -68,19 +68,21 @@ def decode_token(token: str) -> dict:
         )
 
 
-#  Email handlers 
-
+#  Email handlers
 
 def send_password_reset_email(to_email: str, token: str = ""):
-    """Send a 6-digit OTP code via Supabase for password recovery."""
+    """
+    Send a 6-digit OTP code via Supabase sign_in_with_otp.
+    The frontend verifies it with type='email' and then updates the password.
+    """
     try:
         supabase.auth.sign_in_with_otp({
             "email": to_email,
             "options": {
                 "should_create_user": False,
-                "data": {"type": "recovery"}
             }
         })
+        print(f"✅ Password reset OTP sent to {to_email}")
     except Exception as e:
         print(f"❌ Failed to send OTP email via Supabase: {e}")
 
