@@ -219,10 +219,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 async def root():
     return {"status": "running", "service": "clariva-backend"}
 
-@app.get("/health")
-def health_check(db: Session = Depends(get_db)):
-    db.execute(text("SELECT 1"))  # keeps Supabase alive
-    return {"status": "ok"}
+
 
 _allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
@@ -240,6 +237,11 @@ def get_db():
         yield db
     finally:
         db.close()
+
+@app.get("/health")
+def health_check(db: Session = Depends(get_db)):
+    db.execute(text("SELECT 1"))  # keeps Supabase alive
+    return {"status": "ok"}
 
 class UserCreate(BaseModel):
     name:     str
