@@ -56,7 +56,7 @@ CLOUDFLARE_WORKER_URL = os.getenv(
 
 def _upload_to_supabase(safe_key: str) -> bool:
     """Upload FAISS index and chunks to Supabase Storage."""
-    from auth import supabase
+    from auth import supabase_admin
     try:
         faiss_path  = f"{RAG_STORAGE_DIR}/{safe_key}.faiss"
         chunks_path = f"{RAG_STORAGE_DIR}/{safe_key}.chunks.json"
@@ -66,7 +66,7 @@ def _upload_to_supabase(safe_key: str) -> bool:
         
         # Upload .faiss file
         with open(faiss_path, "rb") as f:
-            supabase.storage.from_("rag-indexes").upload(
+            supabase_admin.storage.from_("rag-indexes").upload(
                 path=f"{safe_key}.faiss",
                 file=f.read(),
                 file_options={"content-type": "application/octet-stream",
@@ -75,7 +75,7 @@ def _upload_to_supabase(safe_key: str) -> bool:
         
         # Upload .chunks.json file
         with open(chunks_path, "rb") as f:
-            supabase.storage.from_("rag-indexes").upload(
+            supabase_admin.storage.from_("rag-indexes").upload(
                 path=f"{safe_key}.chunks.json",
                 file=f.read(),
                 file_options={"content-type": "application/json",
@@ -91,20 +91,20 @@ def _upload_to_supabase(safe_key: str) -> bool:
 
 def _download_from_supabase(safe_key: str) -> bool:
     """Download FAISS index and chunks from Supabase Storage."""
-    from auth import supabase
+    from auth import supabase_admin
     try:
         faiss_path  = f"{RAG_STORAGE_DIR}/{safe_key}.faiss"
         chunks_path = f"{RAG_STORAGE_DIR}/{safe_key}.chunks.json"
         
         # Download .faiss file
-        faiss_bytes = supabase.storage.from_("rag-indexes").download(
+        faiss_bytes = supabase_admin.storage.from_("rag-indexes").download(
             f"{safe_key}.faiss"
         )
         with open(faiss_path, "wb") as f:
             f.write(faiss_bytes)
         
         # Download .chunks.json file
-        chunks_bytes = supabase.storage.from_("rag-indexes").download(
+        chunks_bytes = supabase_admin.storage.from_("rag-indexes").download(
             f"{safe_key}.chunks.json"
         )
         with open(chunks_path, "wb") as f:
@@ -119,9 +119,9 @@ def _download_from_supabase(safe_key: str) -> bool:
 
 def _delete_from_supabase(safe_key: str) -> bool:
     """Delete FAISS index and chunks from Supabase Storage."""
-    from auth import supabase
+    from auth import supabase_admin
     try:
-        supabase.storage.from_("rag-indexes").remove([
+        supabase_admin.storage.from_("rag-indexes").remove([
             f"{safe_key}.faiss",
             f"{safe_key}.chunks.json"
         ])
@@ -142,10 +142,10 @@ async def lifespan(app: FastAPI):
     models.Base.metadata.create_all(bind=engine)
 
     # Try to load indexes from Supabase Storage first
-    from auth import supabase
+    from auth import supabase_admin
     loaded = 0
     try:
-        files = supabase.storage.from_("rag-indexes").list()
+        files = supabase_admin.storage.from_("rag-indexes").list()
         faiss_files = [
             f["name"] for f in files 
             if f["name"].endswith(".faiss")
