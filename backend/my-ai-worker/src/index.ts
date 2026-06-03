@@ -55,17 +55,33 @@ Answer completely and thoroughly:`;
 
       const messages = [{ role: 'user', content: prompt }];
 
-      const stream = await env.AI.run('@cf/meta/llama-3.1-8b-instruct-fast', {
-        messages,
-        stream: true,
-      });
+      const streamRequested = body.stream !== false;
 
-      return new Response(stream, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          ...CORS_HEADERS,
-        },
-      });
+      if (streamRequested) {
+        const stream = await env.AI.run('@cf/meta/llama-3.1-8b-instruct-fast', {
+          messages,
+          stream: true,
+        });
+
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            ...CORS_HEADERS,
+          },
+        });
+      } else {
+        const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct-fast', {
+          messages,
+          stream: false,
+        });
+
+        return new Response(JSON.stringify(response), {
+          headers: {
+            'Content-Type': 'application/json',
+            ...CORS_HEADERS,
+          },
+        });
+      }
     } catch (e) {
       console.error(e);
       return new Response(e.message, {

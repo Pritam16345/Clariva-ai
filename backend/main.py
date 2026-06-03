@@ -1376,7 +1376,7 @@ def _generate_summary(content: str) -> str:
         )
         resp = requests.post(
             CLOUDFLARE_WORKER_URL,
-            json={"prompt": prompt},
+            json={"prompt": prompt, "stream": False},
             headers={"Content-Type": "application/json"},
             timeout=30,
         )
