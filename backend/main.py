@@ -1570,8 +1570,31 @@ def _extract_pdf_text(file: UploadFile) -> str:
     try:
         with open(tmp_path, "wb") as buf:
             shutil.copyfileobj(file.file, buf)
+        
+        # 1. Try standard text extraction
         with fitz.open(tmp_path) as doc:
-            text = "".join(page.get_text() for page in doc)
+            text = "".join(page.get_text() for page in doc).strip()
+            
+        # 2. Fall back to OCR if no text was found
+        if not text:
+            print(f"No direct text found in {file.filename}. Attempting OCR...")
+            try:
+                from pdf2image import convert_from_path
+                import pytesseract
+                
+                # Convert PDF pages to PIL images
+                images = convert_from_path(tmp_path)
+                ocr_pages = []
+                for idx, img in enumerate(images):
+                    page_text = pytesseract.image_to_string(img)
+                    ocr_pages.append(page_text)
+                
+                text = "\n\n".join(ocr_pages).strip()
+                if text:
+                    print(f"Successfully extracted text via OCR for {file.filename}")
+            except Exception as ocr_err:
+                print(f"OCR failed for {file.filename}: {ocr_err}")
+                
         return text or "This PDF contains no extractable text."
     finally:
         if os.path.exists(tmp_path):
