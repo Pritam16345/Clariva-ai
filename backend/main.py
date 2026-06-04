@@ -898,7 +898,10 @@ def get_chat_context(
         key=lambda x: x[0],
     )
     top_chunks = [chunk for _, chunk in scored]
-    context    = "\n\n".join(top_chunks)
+    doc_info = f"Document Title: {source.title or body.source_identifier}"
+    if source.summary:
+        doc_info += f"\nDocument Summary: {source.summary}"
+    context    = doc_info + "\n\n" + "\n\n".join(top_chunks)
 
     return {
         "context":      context,
@@ -960,7 +963,11 @@ def get_multi_chat_context(
 
     all_scored.sort(key=lambda x: x[0])
     top = all_scored[:6]
-    context = "\n\n".join(
+    sources_info = "Sources in this chat:\n" + "\n".join(
+        f"- {s.title or s.source_identifier}" + (f": {s.summary}" if s.summary else "")
+        for s in sources
+    )
+    context = sources_info + "\n\n" + "\n\n".join(
         f"[From: {title}]\n{chunk}" for _, chunk, title in top
     )
 

@@ -429,7 +429,7 @@ export function ChatWindow() {
       </div>
 
       {/* Input Area — Anchored at bottom inside the centered column layout */}
-      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background via-background to-transparent pt-10 pb-6 px-4 sm:px-6 z-20 pointer-events-none">
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-background via-background/90 to-transparent pt-8 pb-3 px-4 sm:px-6 z-20 pointer-events-none">
         <div className="max-w-[768px] mx-auto pointer-events-auto">
           <ChatInput
             value={inputValue}
@@ -437,7 +437,7 @@ export function ChatWindow() {
             onSend={handleSend}
             disabled={isStreaming}
           />
-          <div className="text-center mt-3 text-[12px] text-[#4a4a5a]">
+          <div className="text-center mt-2 text-[12px] text-[#4a4a5a]">
             Clariva AI can make mistakes. Verify important information with citations.
           </div>
         </div>

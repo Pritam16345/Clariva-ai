@@ -72,7 +72,7 @@ export const useAppStore = create<AppState>()((set) => ({
   activeSource: null,
   selectedSourceIds: [],
   setSources: (sources) => set({ allSources: sources }),
-  setActiveSource: (source) => set({ activeSource: source, isMultiSourceMode: false }),
+  setActiveSource: (source) => set({ activeSource: source, isMultiSourceMode: false, selectedSourceIds: [] }),
   setSelectedSourceIds: (ids) => set({ selectedSourceIds: ids, isMultiSourceMode: ids.length > 0 }),
   toggleSourceSelection: (id) =>
     set((state) => {

@@ -42,7 +42,7 @@ export function ChatInput({
   const isOverLimit = value.length > maxChars;
 
   return (
-    <div className="px-6 pb-4 pt-3 border-t border-border bg-background shrink-0">
+    <div className="px-0 pb-2 pt-0 bg-transparent shrink-0">
       <div
         className={cn(
           "flex items-end gap-2.5 rounded-[12px] border border-[#252535] bg-[#0e0e16] px-4 py-2.5 transition-all",

@@ -68,16 +68,19 @@ export function SourceItem({ source, isActive, isSelected, viewMode, onSelect, o
           )}
         >
           <div className="flex justify-between items-start mb-2 z-10 w-full relative">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div
-                className="absolute -top-1 -left-1 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                className={cn(
+                  "transition-all duration-200 z-20",
+                  isSelected ? "opacity-100" : "opacity-45 group-hover:opacity-100"
+                )}
                 onClick={(e) => { e.stopPropagation(); onToggleSelection?.(); }}
               >
                 <input
                   type="checkbox"
                   checked={isSelected}
                   readOnly
-                  className={cn("w-4 h-4 rounded border-border cursor-pointer", isSelected && "opacity-100")}
+                  className="w-4 h-4 rounded border-border cursor-pointer accent-[#7c6af5]"
                 />
               </div>
               <div className={cn("p-2 rounded-xl flex items-center justify-center shrink-0", typeColorMap[type] || typeColorMap.pdf)}>
@@ -150,15 +153,17 @@ export function SourceItem({ source, isActive, isSelected, viewMode, onSelect, o
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div
-          className="flex items-center justify-center"
+          className={cn(
+            "flex items-center justify-center transition-all duration-200",
+            isSelected ? "opacity-100" : "opacity-45 group-hover:opacity-100"
+          )}
           onClick={(e) => { e.stopPropagation(); onToggleSelection?.(); }}
         >
           <input
             type="checkbox"
             checked={isSelected}
             readOnly
-            className="w-4 h-4 rounded border-border cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-            style={{ opacity: isSelected ? 1 : undefined }}
+            className="w-4 h-4 rounded border-border cursor-pointer accent-[#7c6af5]"
           />
         </div>
         <div className={cn("p-1.5 rounded-lg flex items-center justify-center shrink-0", typeColorMap[type] || typeColorMap.pdf)}>
