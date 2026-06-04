@@ -90,27 +90,64 @@ export function ChatWindow() {
 
     setIsStreaming(true);
 
+    let tokenBuffer = "";
+    let isTypingLoopRunning = false;
+    let streamFinished = false;
+    let renderedText = "";
+    let finalSources: string[] | undefined = undefined;
+    let citationAttached = false;
+
+    const runTypingLoop = () => {
+      if (isTypingLoopRunning) return;
+      isTypingLoopRunning = true;
+
+      const interval = setInterval(() => {
+        if (tokenBuffer.length > 0) {
+          let charsToConsume = 1;
+          if (tokenBuffer.length > 150) {
+            charsToConsume = 8;
+          } else if (tokenBuffer.length > 50) {
+            charsToConsume = 4;
+          } else if (tokenBuffer.length > 15) {
+            charsToConsume = 2;
+          }
+
+          const chunk = tokenBuffer.slice(0, charsToConsume);
+          tokenBuffer = tokenBuffer.slice(charsToConsume);
+          renderedText += chunk;
+
+          updateLastMessage(sourceId, (msg) => ({
+            ...msg,
+            text: renderedText,
+          }));
+        } else if (streamFinished) {
+          clearInterval(interval);
+          isTypingLoopRunning = false;
+          
+          updateLastMessage(sourceId, (msg) => ({
+            ...msg,
+            isStreaming: false,
+            sourceTitle: finalSources ? finalSources.join(", ") : undefined,
+          }));
+          setIsStreaming(false);
+
+          if (!isMultiSourceMode && activeSourceObj && msgHasText(sourceId) && !citationAttached) {
+            citationAttached = true;
+            setTimeout(() => getSourceChunksAndAttachCitation(activeSourceObj.id), 500);
+          }
+        }
+      }, 15);
+    };
+
     const onToken = (token: string) => {
-      updateLastMessage(sourceId, (msg) => ({
-        ...msg,
-        text: msg.text + token,
-      }));
+      tokenBuffer += token;
+      runTypingLoop();
     };
 
     const onDone = (sources?: string[]) => {
-      // In a real app we'd get a citation chunk from backend.
-      // For now we simulate that source/citation is returned.
-      updateLastMessage(sourceId, (msg) => ({
-        ...msg,
-        isStreaming: false,
-        sourceTitle: sources ? sources.join(", ") : undefined,
-      }));
-      setIsStreaming(false);
-
-      // Hack to attach citation if we're simulating NotebookLM
-      if (!isMultiSourceMode && activeSource && msgHasText(sourceId)) {
-        setTimeout(() => getSourceChunksAndAttachCitation(activeSource.id), 500);
-      }
+      finalSources = sources;
+      streamFinished = true;
+      runTypingLoop();
     };
 
     const onError = (error: string) => {
@@ -431,20 +468,61 @@ export function ChatWindow() {
 
     setIsStreaming(true);
 
+    let tokenBuffer = "";
+    let isTypingLoopRunning = false;
+    let streamFinished = false;
+    let renderedText = "";
+    let citationAttached = false;
+
+    const runTypingLoop = () => {
+      if (isTypingLoopRunning) return;
+      isTypingLoopRunning = true;
+
+      const interval = setInterval(() => {
+        if (tokenBuffer.length > 0) {
+          let charsToConsume = 1;
+          if (tokenBuffer.length > 150) {
+            charsToConsume = 8;
+          } else if (tokenBuffer.length > 50) {
+            charsToConsume = 4;
+          } else if (tokenBuffer.length > 15) {
+            charsToConsume = 2;
+          }
+
+          const chunk = tokenBuffer.slice(0, charsToConsume);
+          tokenBuffer = tokenBuffer.slice(charsToConsume);
+          renderedText += chunk;
+
+          updateLastMessage(sourceId, (msg) => ({
+            ...msg,
+            text: renderedText,
+          }));
+        } else if (streamFinished) {
+          clearInterval(interval);
+          isTypingLoopRunning = false;
+          
+          updateLastMessage(sourceId, (msg) => ({
+            ...msg,
+            isStreaming: false,
+          }));
+          setIsStreaming(false);
+
+          if (activeSourceObj && !citationAttached) {
+            citationAttached = true;
+            setTimeout(() => getSourceChunksAndAttachCitation(activeSourceObj.id), 500);
+          }
+        }
+      }, 15);
+    };
+
     const onToken = (token: string) => {
-      updateLastMessage(sourceId, (msg) => ({
-        ...msg,
-        text: msg.text + token,
-      }));
+      tokenBuffer += token;
+      runTypingLoop();
     };
 
     const onDone = () => {
-      updateLastMessage(sourceId, (msg) => ({
-        ...msg,
-        isStreaming: false,
-      }));
-      setIsStreaming(false);
-      setTimeout(() => getSourceChunksAndAttachCitation(activeSourceObj.id), 500);
+      streamFinished = true;
+      runTypingLoop();
     };
 
     const onError = (error: string) => {
