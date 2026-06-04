@@ -42,10 +42,10 @@ export function ChatInput({
   const isOverLimit = value.length > maxChars;
 
   return (
-    <div className="px-0 pb-2 pt-0 bg-transparent shrink-0">
+    <div className="px-0 pb-1.5 pt-0 bg-transparent shrink-0">
       <div
         className={cn(
-          "flex items-end gap-2.5 rounded-[12px] border border-[#252535] bg-[#0e0e16] px-4 py-2.5 transition-all",
+          "flex items-end gap-2.5 rounded-[12px] border border-[#252535] bg-[#0e0e16] px-4 py-2 transition-all",
           "focus-within:border-[rgba(124,106,245,0.5)] focus-within:shadow-[0_0_0_3px_rgba(124,106,245,0.08)]"
         )}
       >
@@ -72,16 +72,16 @@ export function ChatInput({
         </button>
       </div>
 
-      <div className="flex justify-between items-center mt-1.5 px-1">
+      <div className="flex justify-between items-center mt-1 px-1">
         <span
           className={cn(
-            "text-[12px]",
+            "text-[11px]",
             isOverLimit ? "text-red-400" : "text-[#4a4a5a]"
           )}
         >
           {value.length} / {maxChars}
         </span>
-        <span className="text-[12px] text-[#4a4a5a]">
+        <span className="text-[11px] text-[#4a4a5a]">
           Shift+Enter for new line · Enter to send
         </span>
       </div>

@@ -886,7 +886,8 @@ def get_chat_context(
     q_embedding = embedding_model.encode([body.question])
     q_embedding = np.array(q_embedding, dtype=np.float32)
 
-    k = min(6, len(chunks))
+    k = _get_retrieval_k(str(source.content), body.question)
+    k = min(k, len(chunks))
     distances, indices = index.search(q_embedding, k)
 
     scored = sorted(
@@ -947,7 +948,8 @@ def get_multi_chat_context(
         q_embedding = embedding_model.encode([body.question])
         q_embedding = np.array(q_embedding, dtype=np.float32)
 
-        k = min(3, len(chunks))
+        k = _get_retrieval_k(str(source.content), body.question)
+        k = min(k, 6, len(chunks))
         distances, indices = index.search(q_embedding, k)
 
         for i in range(k):
@@ -1295,12 +1297,12 @@ def _get_retrieval_k(content: str, query: str) -> int:
     is_list_query = any(kw in query.lower() for kw in list_keywords)
     
     length = len(content)
-    if length < 6000:
+    if length < 15000:
         return 1000 # Return safely a large number, endpoint caps it to actual chunk list length
-    elif length < 30000:
-        return 8 if is_list_query else 5
+    elif length < 50000:
+        return 12 if is_list_query else 8
     else:
-        return 6 if is_list_query else 4
+        return 8 if is_list_query else 5
 
 def _load_rag_index(source_identifier: str, owner_id: int) -> bool:
     """
