@@ -125,6 +125,16 @@ def update_source_summary(
         db.refresh(source)
     return source
 
+def update_source_content(
+    db: Session, source_id: int, content: str
+) -> Optional[models.ContentSource]:
+    source = db.query(models.ContentSource).filter(models.ContentSource.id == source_id).first()
+    if source:
+        source.content = content
+        db.commit()
+        db.refresh(source)
+    return source
+
 
 def delete_content_source_by_id(
     db: Session, source_id: int, owner_id: int

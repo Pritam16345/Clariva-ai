@@ -16,13 +16,13 @@ import trafilatura
 import fitz
 import whisper
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Request
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, field_validator
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -43,6 +43,7 @@ from auth import (
 )
 
 embedding_model: SentenceTransformer = None   # type: ignore[assignment]
+cross_encoder_model: CrossEncoder = None      # type: ignore[assignment]
 whisper_model: whisper.Whisper = None         # type: ignore[assignment]
 rag_indexes: dict = {}
 
@@ -134,10 +135,11 @@ def _delete_from_supabase(safe_key: str) -> bool:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global embedding_model, whisper_model
+    global embedding_model, whisper_model, cross_encoder_model
     print("Loading AI models…")
     whisper_model = whisper.load_model("base")
     embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+    cross_encoder_model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
     print("Models loaded.")
     models.Base.metadata.create_all(bind=engine)
 
@@ -648,6 +650,7 @@ def process_source(
 @limiter.limit("10/hour")
 def process_pdf_upload(
     request:      Request,
+    background_tasks: BackgroundTasks,
     db:           Session      = Depends(get_db),
     current_user: models.User  = Depends(get_current_user),
     file:         UploadFile   = File(...),
@@ -658,20 +661,31 @@ def process_pdf_upload(
     if existing:
         return _source_dict(existing)
 
-    content    = _extract_pdf_text(file)
+    # Save to temp path for background processing
+    uid      = uuid.uuid4().hex
+    tmp_path = f"temp_{uid}_{file.filename}"
+    with open(tmp_path, "wb") as buf:
+        shutil.copyfileobj(file.file, buf)
+
+    # Create dummy source
     new_source = crud.create_content_source(
         db,
         source_identifier=str(file.filename),
         source_type="pdf",
-        content=str(content),
+        content="[PROCESSING]",
         title=str(file.filename),
         owner_id=int(current_user.id),
+        summary="Processing..."
     )
-    _build_rag_index(str(file.filename), str(content), int(current_user.id))
-
-    summary = _generate_summary(str(content))
-    if summary:
-        crud.update_source_summary(db, source_id=int(new_source.id), summary=str(summary))
+    
+    background_tasks.add_task(
+        _process_document_background,
+        source_id=new_source.id,
+        file_path=tmp_path,
+        file_name=file.filename,
+        file_type="pdf",
+        owner_id=current_user.id
+    )
 
     return _source_dict(new_source)
 
@@ -713,6 +727,7 @@ def process_text_upload(
 @limiter.limit("5/hour")
 def process_audio_upload(
     request:      Request,
+    background_tasks: BackgroundTasks,
     db:           Session     = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
     file:         UploadFile  = File(...),
@@ -730,8 +745,12 @@ def process_audio_upload(
     if existing:
         return _source_dict(existing)
 
-    # Transcribe
-    content = _transcribe_audio(file)
+    # Save to temp path for background processing
+    uid      = uuid.uuid4().hex
+    tmp_path = f"temp_{uid}_{file.filename}"
+    with open(tmp_path, "wb") as buf:
+        shutil.copyfileobj(file.file, buf)
+
     fname_str = str(file.filename or "audio_file")
     title   = os.path.splitext(fname_str)[0]
 
@@ -739,17 +758,20 @@ def process_audio_upload(
         db,
         source_identifier=str(file.filename),
         source_type=str(source_type),
-        content=str(content),
+        content="[PROCESSING]",
         title=str(title),
         owner_id=int(current_user.id),
+        summary="Processing..."
     )
-    _build_rag_index(str(file.filename), str(content), int(current_user.id))
-
-    summary = _generate_summary(str(content))
-    if summary:
-        crud.update_source_summary(
-            db, source_id=int(new_source.id), summary=str(summary)
-        )
+    
+    background_tasks.add_task(
+        _process_document_background,
+        source_id=new_source.id,
+        file_path=tmp_path,
+        file_name=file.filename,
+        file_type="audio",
+        owner_id=current_user.id
+    )
 
     return _source_dict(new_source)
 
@@ -888,17 +910,28 @@ def get_chat_context(
 
     k = _get_retrieval_k(str(source.content), body.question)
     k = min(k, len(chunks))
-    distances, indices = index.search(q_embedding, k)
+    
+    if k < len(chunks) and cross_encoder_model:
+        search_k = min(30, len(chunks))
+        distances, indices = index.search(q_embedding, search_k)
+        retrieved = [chunks[indices[0][i]] for i in range(search_k) if 0 <= indices[0][i] < len(chunks)]
+        
+        cross_inp = [[body.question, chunk] for chunk in retrieved]
+        scores = cross_encoder_model.predict(cross_inp)
+        scored_pairs = sorted(zip(scores, retrieved), key=lambda x: x[0], reverse=True)
+        top_chunks = [chunk for score, chunk in scored_pairs[:k]]
+    else:
+        distances, indices = index.search(q_embedding, k)
+        scored = sorted(
+            [
+                (float(distances[0][i]), chunks[indices[0][i]])
+                for i in range(k)
+                if 0 <= indices[0][i] < len(chunks)
+            ],
+            key=lambda x: x[0],
+        )
+        top_chunks = [chunk for _, chunk in scored]
 
-    scored = sorted(
-        [
-            (float(distances[0][i]), chunks[indices[0][i]])
-            for i in range(k)
-            if 0 <= indices[0][i] < len(chunks)
-        ],
-        key=lambda x: x[0],
-    )
-    top_chunks = [chunk for _, chunk in scored]
     doc_info = f"Document Title: {source.title or body.source_identifier}"
     if source.summary:
         doc_info += f"\nDocument Summary: {source.summary}"
@@ -964,7 +997,15 @@ def get_multi_chat_context(
         raise HTTPException(status_code=404, detail="No indexed sources found")
 
     all_scored.sort(key=lambda x: x[0])
-    top = all_scored[:6]
+    top_candidates = all_scored[:20]
+    
+    if cross_encoder_model and len(top_candidates) > 0:
+        cross_inp = [[body.question, chunk] for dist, chunk, title in top_candidates]
+        scores = cross_encoder_model.predict(cross_inp)
+        scored_pairs = sorted(zip(scores, top_candidates), key=lambda x: x[0], reverse=True)
+        top = [candidate for score, candidate in scored_pairs[:6]]
+    else:
+        top = all_scored[:6]
     sources_info = "Sources in this chat:\n" + "\n".join(
         f"- {s.title or s.source_identifier}" + (f": {s.summary}" if s.summary else "")
         for s in sources
@@ -1573,12 +1614,59 @@ def _scrape_website_content(url: str) -> str:
     return trafilatura.extract(resp.text) or "Could not extract content from this URL."
 
 
+def _process_document_background(source_id: int, file_path: str, file_name: str, file_type: str, owner_id: int):
+    # This runs in a background thread, so we need our own DB session
+    db = SessionLocal()
+    try:
+        content = ""
+        if file_type == "pdf":
+            content = _extract_pdf_text_from_path(file_path, file_name)
+        elif file_type == "audio" or file_type == "video":
+            content = _transcribe_audio_from_path(file_path, file_name)
+
+        if not content:
+            content = "[ERROR] No text could be extracted."
+            
+        crud.update_source_content(db, source_id=source_id, content=content)
+        
+        # Now chunk and build RAG
+        _build_rag_index(file_name, content, owner_id)
+        
+        # Finally generate summary
+        summary = _generate_summary(content)
+        if summary:
+            crud.update_source_summary(db, source_id=source_id, summary=summary)
+        else:
+            crud.update_source_summary(db, source_id=source_id, summary="Processed successfully.")
+            
+    except Exception as e:
+        print(f"Background processing error: {e}")
+        crud.update_source_summary(db, source_id=source_id, summary=f"Error: {e}")
+    finally:
+        db.close()
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except:
+                pass
+
+
 def _extract_pdf_text(file: UploadFile) -> str:
     uid      = uuid.uuid4().hex
     tmp_path = f"temp_{uid}_{file.filename}"
     try:
         with open(tmp_path, "wb") as buf:
             shutil.copyfileobj(file.file, buf)
+        return _extract_pdf_text_from_path(tmp_path, file.filename)
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except:
+                pass
+
+def _extract_pdf_text_from_path(tmp_path: str, filename: str) -> str:
+    try:
         
         # 1. Try standard text extraction
         with fitz.open(tmp_path) as doc:
@@ -1637,17 +1725,20 @@ def _transcribe_audio(file: UploadFile) -> str:
         with open(tmp_path, "wb") as buf:
             shutil.copyfileobj(file.file, buf)
 
-        print(f"Transcribing: {file.filename} ...")
-        result  = whisper_model.transcribe(tmp_path, fp16=False)
-        content = str(result.get("text", "")).strip()
-
-        if not content:
-            raise HTTPException(
-                status_code=422,
-                detail="No speech detected in this file. "
-                       "Make sure the file contains audible speech."
-            )
-        return content
+        return _transcribe_audio_from_path(tmp_path, file.filename)
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
+
+def _transcribe_audio_from_path(tmp_path: str, filename: str) -> str:
+    print(f"Transcribing: {filename} ...")
+    result  = whisper_model.transcribe(tmp_path, fp16=False)
+    content = str(result.get("text", "")).strip()
+
+    if not content:
+        raise HTTPException(
+            status_code=422,
+            detail="No speech detected in this file. "
+                   "Make sure the file contains audible speech."
+        )
+    return content

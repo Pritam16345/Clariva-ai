@@ -73,7 +73,12 @@ export function IngestPanel() {
       setFileName("");
       selectedFile.current = null;
       if (fileRef.current) fileRef.current.value = "";
-      toast.success("Source processed successfully");
+      if (result.summary === "Processing...") {
+        toast.success("Upload started. Processing in background...");
+        pollForCompletion(result.id);
+      } else {
+        toast.success("Source processed successfully");
+      }
     } catch (err: any) {
       if (err && err.error === "youtube_blocked") {
         setYoutubeError(err);
@@ -87,6 +92,36 @@ export function IngestPanel() {
       }, 500);
     }
   }
+
+  const pollForCompletion = async (sourceId: number) => {
+    let attempts = 0;
+    while (attempts < 60) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      try {
+        const state = useAppStore.getState();
+        if (!state.currentUser) return;
+        
+        const latestSources = await api.getSources(state.currentUser.id);
+        const updatedSource = latestSources.find((s: any) => s.id === sourceId);
+        
+        if (updatedSource && updatedSource.summary !== "Processing...") {
+          state.setSources(latestSources);
+          if (useAppStore.getState().activeSource?.id === sourceId) {
+            state.setActiveSource(updatedSource);
+          }
+          if (updatedSource.summary?.startsWith("Error")) {
+              toast.error(`Processing failed: ${updatedSource.title}`);
+          } else {
+              toast.success(`Processing complete: ${updatedSource.title}`);
+          }
+          break;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+      attempts++;
+    }
+  };
 
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
