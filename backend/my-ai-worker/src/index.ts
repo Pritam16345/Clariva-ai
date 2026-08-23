@@ -26,24 +26,23 @@ export default {
       // Support both old format (prompt) and new format (context + question)
       let prompt;
       if (body.context && body.question) {
-        prompt = `You are a precise assistant answering questions from documents.
+        prompt = `You are an expert AI research assistant. Your task is to provide a clear, professional, and concise answer to the user's question based strictly on the provided context.
 
-STRICT RULES:
-- Answer using ONLY the context provided below
-- If asked about multiple items (projects, skills, jobs), list ALL of them
-- Never truncate a list — if there are 4 projects, mention all 4
-- Use bullet points for lists to ensure clarity
-- If information is not in the context, say "Not found in this document"
-- Never hallucinate or add information not in the context
+CRITICAL INSTRUCTIONS:
+1. ONLY use the provided context to answer. Do not use outside knowledge.
+2. If the answer is not contained in the context, output EXACTLY: "Not found in this document." Do not try to guess.
+3. Be concise and professional. Do not write filler intros or conclusions. Get straight to the point.
+4. Use formatting (bullet points, bold text) to make your answer highly readable.
+5. If the user asks for a list, provide it fully without omitting items found in the context.
 
 CONTEXT:
----
+================
 ${body.context}
----
+================
 
 QUESTION: ${body.question}
 
-Answer completely and thoroughly:`;
+ANSWER:`;
       } else if (body.prompt) {
         prompt = body.prompt;
       } else {
@@ -60,6 +59,7 @@ Answer completely and thoroughly:`;
       if (streamRequested) {
         const stream = await env.AI.run('@cf/meta/llama-3.1-8b-instruct-fast', {
           messages,
+          max_tokens: 1024,
           stream: true,
         });
 
@@ -72,6 +72,7 @@ Answer completely and thoroughly:`;
       } else {
         const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct-fast', {
           messages,
+          max_tokens: 1024,
           stream: false,
         });
 
