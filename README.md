@@ -55,13 +55,13 @@ flowchart TD
         API[API Router]:::backend
         Queue[Background Tasks Worker]:::backend
         Auth[Auth Service]:::backend
-        Processor[Document Extractor\n(PyMuPDF / Whisper)]:::backend
+        Processor["Document Extractor<br>(PyMuPDF / Whisper)"]:::backend
         Reranker[Cross-Encoder Reranker]:::backend
     end
     
     subgraph Storage [3. Databases]
-        SQL[(Supabase Postgres\nUser & Metadata)]:::database
-        FAISS[(FAISS Vector DB\nText Embeddings)]:::database
+        SQL[("Supabase Postgres<br>(User & Metadata)")]:::database
+        FAISS[("FAISS Vector DB<br>(Text Embeddings)")]:::database
     end
     
     subgraph Edge [4. Real-Time Streaming]
