@@ -216,7 +216,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             isActive={activeSource?.id === source.id}
                             isSelected={selectedSourceIds.includes(source.id)}
                             viewMode={viewMode}
-                            onSelect={() => { setActiveSource(source); setIsMultiSourceMode(false); }}
+                            onSelect={() => { 
+                              setActiveSource(source); 
+                              setIsMultiSourceMode(false); 
+                              if (!selectedSourceIds.includes(source.id)) {
+                                setSelectedSourceIds([...selectedSourceIds, source.id]);
+                              }
+                            }}
                             onToggleSelection={() => toggleSourceSelection(source.id)}
                             onDelete={() => handleDelete(source.id)}
                           />

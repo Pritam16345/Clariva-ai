@@ -1625,7 +1625,7 @@ def _process_document_background(source_id: int, file_path: str, file_name: str,
             content = _transcribe_audio_from_path(file_path, file_name)
 
         if not content:
-            content = "[ERROR] No text could be extracted."
+            raise Exception("No text could be extracted.")
             
         crud.update_source_content(db, source_id=source_id, content=content)
         
@@ -1641,7 +1641,7 @@ def _process_document_background(source_id: int, file_path: str, file_name: str,
             
     except Exception as e:
         print(f"Background processing error: {e}")
-        crud.update_source_summary(db, source_id=source_id, summary=f"Error: {e}")
+        crud.delete_content_source_by_id(db, source_id=source_id, owner_id=owner_id)
     finally:
         db.close()
         if os.path.exists(file_path):

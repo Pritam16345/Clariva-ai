@@ -123,13 +123,6 @@ export function SourceItem({ source, isActive, isSelected, viewMode, onSelect, o
           </div>
         </motion.div>
 
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="absolute top-2 right-2 z-20 p-1.5 rounded-md text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-all shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] bg-background/80 backdrop-blur-md border border-border"
-          title="Remove source"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
       </div>
     );
   }

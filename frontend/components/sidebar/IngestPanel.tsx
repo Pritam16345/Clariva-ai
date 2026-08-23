@@ -104,7 +104,16 @@ export function IngestPanel() {
         const latestSources = await api.getSources(state.currentUser.id);
         const updatedSource = latestSources.find((s: any) => s.id === sourceId);
         
-        if (updatedSource && updatedSource.summary !== "Processing...") {
+        if (!updatedSource) {
+           state.setSources(latestSources);
+           if (useAppStore.getState().activeSource?.id === sourceId) {
+             state.setActiveSource(null);
+           }
+           toast.error("Processing failed. Document was removed.");
+           break;
+        }
+
+        if (updatedSource.summary !== "Processing...") {
           state.setSources(latestSources);
           if (useAppStore.getState().activeSource?.id === sourceId) {
             state.setActiveSource(updatedSource);
