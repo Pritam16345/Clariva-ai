@@ -12,7 +12,8 @@
 
 Clariva AI allows you to ingest diverse content streams—such as **YouTube videos**, **PDFs (with automatic OCR fallback)**, **websites**, and **audio/video files**—to build a unified semantic index. You can then query across single or multiple sources with advanced context re-ranking, sub-millisecond document retrieval, and word-by-word streaming answers directly from edge LLMs.
 
-🔗 **Live Demo:** [clariva-ai.vercel.app](https://clariva-ai.vercel.app)
+🔗 **Live Demo:** [clariva-ai.vercel.app](https://clariva-ai.vercel.app)  
+📖 **Comprehensive Project Architecture & Interview Guide:** See [PROJECT_EXPLANATION.md](PROJECT_EXPLANATION.md) for full technical breakdown, Mermaid architecture diagrams, algorithmic complexity, and 15+ in-depth interview questions and answers.
 
 ---
 
