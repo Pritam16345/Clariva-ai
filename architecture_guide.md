@@ -260,68 +260,49 @@ This diagram shows all component tiers, data stores, external services, and netw
 ```mermaid
 flowchart TB
     %% Styling Definitions
-    classDef client fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
-    classDef backend fill:#0f172a,stroke:#34d399,stroke-width:2px,color:#f8fafc;
-    classDef edge fill:#1e1b4b,stroke:#f59e0b,stroke-width:2px,color:#f8fafc;
-    classDef storage fill:#311042,stroke:#c084fc,stroke-width:2px,color:#f8fafc;
-    classDef models fill:#1c1917,stroke:#f43f5e,stroke-width:2px,color:#f8fafc;
+    classDef client fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#ffffff;
+    classDef backend fill:#0f172a,stroke:#34d399,stroke-width:2px,color:#ffffff;
+    classDef storage fill:#311042,stroke:#c084fc,stroke-width:2px,color:#ffffff;
+    classDef edge fill:#1e1b4b,stroke:#f59e0b,stroke-width:2px,color:#ffffff;
 
-    User([👤 User / Web Browser]):::client
+    User(["👤 User / Browser"]):::client
 
-    subgraph Tier1 ["Tier 1: Client Layer (Next.js 14 / Vercel)"]
-        UI["Web Dashboard & Chat Window<br><i>(React 18, Tailwind, Zustand)</i>"]:::client
-        StreamClient["SSE Stream Buffer Handler<br><i>(frontend/lib/api.ts)</i>"]:::client
+    subgraph ClientTier ["1. Client Layer (Next.js 14)"]
+        UI["Web Interface & Dashboard<br>(Chat Window, File Uploads, Notes)"]:::client
     end
 
-    subgraph Tier2 ["Tier 2: API Gateway & Worker (FastAPI / Hugging Face / Docker)"]
-        Router["FastAPI REST Router<br><i>(Rate Limiter: 60/hr via slowapi)</i>"]:::backend
-        AuthCheck["JWT Auth Validator<br><i>(Supabase Auth & OAuth)</i>"]:::backend
-        WorkerQueue["Background Task Worker<br><i>(Asynchronous Execution)</i>"]:::backend
-        SearchEngine["Two-Stage Retrieval Engine<br><i>(FAISS + Cross-Encoder)</i>"]:::backend
+    subgraph BackendTier ["2. Backend Services (FastAPI & ML)"]
+        API["FastAPI Gateway<br>(Auth, Rate Limiting, REST API)"]:::backend
+        Worker["Async Background Worker<br>(PDF OCR, Whisper Audio, YouTube)"]:::backend
+        SearchEngine["Two-Stage Search Pipeline<br>(FAISS 30 Chunks + Cross-Encoder Top 5)"]:::backend
     end
 
-    subgraph ML ["Machine Learning & Extraction Engines"]
-        Whisper["OpenAI Whisper<br><i>(Speech-to-Text)</i>"]:::models
-        OCR["PyMuPDF + Tesseract OCR<br><i>(Text & Image Extraction)</i>"]:::models
-        Scraper["6-Layer YouTube Scraper<br><i>(Captions & XML Fallback)</i>"]:::models
-        Embedder["SentenceTransformer<br><i>(all-MiniLM-L6-v2)</i>"]:::models
-        Reranker["Neural Cross-Encoder<br><i>(ms-marco-MiniLM-L-6-v2)</i>"]:::models
+    subgraph StorageTier ["3. Storage Layer (Supabase)"]
+        DB[("PostgreSQL Database<br>(Users, Documents, Notes)")]:::storage
+        SupaStore[("Cloud Storage<br>(FAISS Index File Backups)")]:::storage
     end
 
-    subgraph Tier3 ["Tier 3: Distributed Storage (Supabase)"]
-        Postgres[("PostgreSQL Database<br><i>(Users, Sources, Notes, Feedback)</i>")]:::storage
-        SupaStore[("Supabase Cloud Storage<br><i>(rag-indexes bucket: .faiss & .chunks.json)</i>")]:::storage
+    subgraph EdgeTier ["4. Edge AI Layer (Cloudflare)"]
+        CFWorker["Cloudflare Worker<br>(Meta Llama 3.1 8B Model)"]:::edge
     end
 
-    subgraph Tier4 ["Tier 4: Serverless Edge AI (Cloudflare)"]
-        CFWorker["Cloudflare Worker<br><i>(my-ai-worker / Workers AI)</i>"]:::edge
-        Llama["Meta Llama 3.1 8B Instruct<br><i>(@cf/meta/llama-3.1-8b-instruct-fast)</i>"]:::edge
-    end
+    %% User interaction
+    User -->|Interacts with UI| UI
 
-    %% Interactions
-    User <-->|HTTPS UI Interaction| UI
-    UI -->|1. Upload File / Link| Router
-    Router <-->|Verify JWT Token| AuthCheck
-    Router -->|Write Pending Record| Postgres
-    Router -.->|Dispatch Job| WorkerQueue
-    
-    WorkerQueue --> OCR
-    WorkerQueue --> Whisper
-    WorkerQueue --> Scraper
-    OCR & Whisper & Scraper -->|Raw Text| Embedder
-    Embedder -->|Generate 384d Vectors| SearchEngine
-    SearchEngine -->|Persist Index| SupaStore
+    %% 1. Ingestion Flow
+    UI -->|1. Upload Document or Link| API
+    API -->|Save Pending Record| DB
+    API -.->|Trigger Async Job| Worker
+    Worker -->|Backup Vector Index| SupaStore
 
-    UI -->|2. Ask Question / Get Context| Router
-    Router --> SearchEngine
-    SearchEngine -->|Stage 1: Scan 30 Chunks| Embedder
-    SearchEngine -->|Stage 2: Score Best 5| Reranker
-    Router -->|Return Top 5 Chunks in ~200ms| UI
+    %% 2. Context Retrieval Flow
+    UI -->|2. Ask Question: Retrieve Context| API
+    API -->|Dense Search & Rerank| SearchEngine
+    SearchEngine -->|Return Top 5 Chunks in 200ms| UI
 
-    UI -->|3. Forward Context + Question| CFWorker
-    CFWorker --> Llama
-    Llama -.->|4. Stream SSE Tokens (< 50ms TTFT)| StreamClient
-    StreamClient -.->|Update Chat Screen Word-by-Word| UI
+    %% 3. Edge Inference Flow
+    UI -->|3. Send Top 5 Chunks + Question| CFWorker
+    CFWorker -.->|4. Stream SSE Tokens in under 50ms| UI
 ```
 
 ---
@@ -339,7 +320,7 @@ sequenceDiagram
     participant DB as 🗄️ Supabase Postgres & Storage
     participant CF as 🌐 Cloudflare Worker AI
 
-    Note over User,Web: Phase 1: Asynchronous Upload (< 80ms Response)
+    Note over User,Web: Phase 1: Asynchronous Upload (under 80ms Response)
     User->>Web: Selects scanned PDF / audio file & clicks Upload
     Web->>API: POST /process-pdf-upload (Multipart Form + JWT)
     API->>DB: INSERT into content_sources (status = 'processing')
@@ -359,7 +340,7 @@ sequenceDiagram
     API->>API: Cross-Encoder (ms-marco) scores 30 candidates & picks Top 5 (~180ms)
     API-->>Web: HTTP 200 OK {"context": "Top 5 chunks...", "question": "..."} (Latency: ~200ms)
 
-    Note over User,CF: Phase 3: Direct Edge Token Streaming (< 50ms TTFT)
+    Note over User,CF: Phase 3: Direct Edge Token Streaming (under 50ms TTFT)
     Web->>CF: POST / with {"context": "...", "question": "...", "stream": true}
     CF->>CF: Run @cf/meta/llama-3.1-8b-instruct-fast
     CF-->>Web: SSE Token 1 "The" (Time-to-First-Token: ~45ms)
